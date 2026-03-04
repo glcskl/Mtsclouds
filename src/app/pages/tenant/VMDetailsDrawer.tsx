@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X, Play, Square, Maximize2, Trash2, Copy, Terminal,
   Cpu, HardDrive, Clock, Server
 } from 'lucide-react';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { useApp } from '../../context/AppContext';
-import { vmMetricsData } from '../../data/mockData';
+import { vmMetricsData as fallbackMetrics } from '../../data/mockData';
+import { api } from '../../api/client';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type Tab = 'overview' | 'metrics' | 'logs';
@@ -18,6 +19,14 @@ export function VMDetailsDrawer() {
   } = useApp();
   const [tab, setTab] = useState<Tab>('overview');
   const [copied, setCopied] = useState(false);
+  const [vmMetricsData, setVmMetricsData] = useState(fallbackMetrics);
+  const { refreshTenants } = useApp();
+
+  useEffect(() => {
+    if (selectedVM) {
+      api.getVMMetrics(selectedVM.id).then(setVmMetricsData).catch(() => {});
+    }
+  }, [selectedVM?.id]);
 
   if (!showVMDrawer || !selectedVM) return null;
 
@@ -32,19 +41,41 @@ export function VMDetailsDrawer() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleStart = async () => {
+    try {
+      await api.startVM(selectedVM.id);
+      await refreshTenants();
+      addToast({ type: 'success', title: 'ВМ запущена', message: selectedVM.name });
+      close();
+    } catch (err: any) {
+      addToast({ type: 'error', title: 'Ошибка', message: err.message });
+    }
+  };
+
+  const handleStop = async () => {
+    try {
+      await api.stopVM(selectedVM.id);
+      await refreshTenants();
+      addToast({ type: 'success', title: 'ВМ остановлена', message: selectedVM.name });
+      close();
+    } catch (err: any) {
+      addToast({ type: 'error', title: 'Ошибка', message: err.message });
+    }
+  };
+
   const handleDelete = () => {
     setDeleteTarget({
       type: 'ВМ',
       name: selectedVM.name,
-      onConfirm: () => {
-        if (!activeTenant) return;
-        setTenants(tenants.map(t =>
-          t.id === activeTenant.id
-            ? { ...t, vms: t.vms.filter(v => v.id !== selectedVM.id) }
-            : t
-        ));
-        addToast({ type: 'success', title: 'ВМ удалена', message: selectedVM.name });
-        close();
+      onConfirm: async () => {
+        try {
+          await api.deleteVM(selectedVM.id);
+          await refreshTenants();
+          addToast({ type: 'success', title: 'ВМ удалена', message: selectedVM.name });
+          close();
+        } catch (err: any) {
+          addToast({ type: 'error', title: 'Ошибка удаления', message: err.message });
+        }
       }
     });
     setShowDeleteModal(true);
@@ -81,12 +112,12 @@ export function VMDetailsDrawer() {
         {/* Actions */}
         <div className="px-6 py-3 border-b border-[#E2E8F0] flex items-center gap-2 flex-shrink-0">
           {selectedVM.status === 'STOPPED' && (
-            <button className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-[#DCFCE7] text-[#15803D] text-[12px] font-medium hover:bg-[#BBF7D0] transition-colors">
+            <button onClick={handleStart} className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-[#DCFCE7] text-[#15803D] text-[12px] font-medium hover:bg-[#BBF7D0] transition-colors">
               <Play size={12} /> Запустить
             </button>
           )}
           {selectedVM.status === 'RUNNING' && (
-            <button className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-[#FEF3C7] text-[#B45309] text-[12px] font-medium hover:bg-[#FDE68A] transition-colors">
+            <button onClick={handleStop} className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-[#FEF3C7] text-[#B45309] text-[12px] font-medium hover:bg-[#FDE68A] transition-colors">
               <Square size={12} /> Остановить
             </button>
           )}

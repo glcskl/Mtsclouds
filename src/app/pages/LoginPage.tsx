@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { Eye, EyeOff, Shield, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { mockUsers } from '../data/mockData';
+import { api } from '../api/client';
+
+const demoUsers = [
+  { email: 'admin@demo', password: 'admin123', label: 'Alex Petrov', desc: 'Platform Admin' },
+  { email: 'acme.admin@demo', password: 'admin123', label: 'Maria Ivanova', desc: 'Acme Telecom Admin' },
+  { email: 'beta.admin@demo', password: 'admin123', label: 'Ivan Sidorov', desc: 'Beta Retail Admin' },
+];
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -13,42 +19,32 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const doLogin = async (loginEmail: string, loginPassword: string) => {
+    setError('');
+    setLoading(true);
+    try {
+      const { user } = await api.login(loginEmail, loginPassword);
+      setCurrentUser(user);
+      if (user.tenant) setActiveTenantId(user.tenant);
+      if (user.role === 'platform_admin') {
+        navigate('/admin/overview');
+      } else {
+        navigate('/tenant/dashboard');
+      }
+    } catch (err: any) {
+      setError(err.body?.error || 'Ошибка входа');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     if (!email || !password) {
       setError('Введите email и пароль');
       return;
     }
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setLoading(false);
-    const user = mockUsers.find(u => u.email === email);
-    if (!user) {
-      setError('Пользователь не найден');
-      return;
-    }
-    setCurrentUser(user);
-    if (user.tenant) setActiveTenantId(user.tenant);
-    if (user.role === 'platform_admin') {
-      navigate('/admin/overview');
-    } else {
-      navigate('/tenant/dashboard');
-    }
-  };
-
-  const loginAs = async (userId: string) => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 400));
-    setLoading(false);
-    const user = mockUsers.find(u => u.id === userId)!;
-    setCurrentUser(user);
-    if (user.tenant) setActiveTenantId(user.tenant);
-    if (user.role === 'platform_admin') {
-      navigate('/admin/overview');
-    } else {
-      navigate('/tenant/dashboard');
-    }
+    await doLogin(email, password);
   };
 
   return (
@@ -133,30 +129,17 @@ export default function LoginPage() {
         <div className="mt-5 bg-white rounded-2xl border border-[#E2E8F0] shadow-lg p-5">
           <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">Demo — быстрый вход</p>
           <div className="space-y-2">
-            <button
-              onClick={() => loginAs('u-1')}
-              disabled={loading}
-              className="w-full flex items-center justify-between px-3 h-10 rounded-lg border border-[#E2E8F0] hover:bg-[#FEE7E7] hover:border-[#E30613] transition-colors group"
-            >
-              <span className="text-[12px] font-medium text-[#0F172A]">Alex Petrov</span>
-              <span className="text-[11px] text-[#94A3B8] group-hover:text-[#E30613]">Platform Admin</span>
-            </button>
-            <button
-              onClick={() => loginAs('u-2')}
-              disabled={loading}
-              className="w-full flex items-center justify-between px-3 h-10 rounded-lg border border-[#E2E8F0] hover:bg-[#FEE7E7] hover:border-[#E30613] transition-colors group"
-            >
-              <span className="text-[12px] font-medium text-[#0F172A]">Maria Ivanova</span>
-              <span className="text-[11px] text-[#94A3B8] group-hover:text-[#E30613]">Acme Telecom Admin</span>
-            </button>
-            <button
-              onClick={() => loginAs('u-3')}
-              disabled={loading}
-              className="w-full flex items-center justify-between px-3 h-10 rounded-lg border border-[#E2E8F0] hover:bg-[#FEE7E7] hover:border-[#E30613] transition-colors group"
-            >
-              <span className="text-[12px] font-medium text-[#0F172A]">Ivan Sidorov</span>
-              <span className="text-[11px] text-[#94A3B8] group-hover:text-[#E30613]">Beta Retail Admin</span>
-            </button>
+            {demoUsers.map(u => (
+              <button
+                key={u.email}
+                onClick={() => doLogin(u.email, u.password)}
+                disabled={loading}
+                className="w-full flex items-center justify-between px-3 h-10 rounded-lg border border-[#E2E8F0] hover:bg-[#FEE7E7] hover:border-[#E30613] transition-colors group"
+              >
+                <span className="text-[12px] font-medium text-[#0F172A]">{u.label}</span>
+                <span className="text-[11px] text-[#94A3B8] group-hover:text-[#E30613]">{u.desc}</span>
+              </button>
+            ))}
           </div>
         </div>
 

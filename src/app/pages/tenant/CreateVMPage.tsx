@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { AppShell } from '../../components/layout/AppShell';
 import { ArrowLeft, ArrowRight, Check, AlertTriangle, Loader2, Server } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { templates } from '../../data/mockData';
+import { templates as fallbackTemplates } from '../../data/mockData';
+import { api } from '../../api/client';
 
 type Step = 1 | 2 | 3;
 
@@ -17,18 +18,23 @@ interface Config {
 
 export default function CreateVMPage() {
   const navigate = useNavigate();
-  const { activeTenant, tenants, setTenants, addToast } = useApp();
+  const { activeTenant, addToast, refreshTenants } = useApp();
   const [step, setStep] = useState<Step>(1);
   const [config, setConfig] = useState<Config>({ templateId: '', name: '', cpu: 1, ram: 1, disk: 10 });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [templates, setTemplates] = useState(fallbackTemplates);
+
+  useEffect(() => {
+    api.getTemplates().then(setTemplates).catch(() => {});
+  }, []);
 
   if (!activeTenant) return null;
   const { quota } = activeTenant;
 
-  const remainCPU = quota.cpu.allocated - quota.cpu.used;
-  const remainRAM = quota.ram.allocated - quota.ram.used;
-  const remainDisk = quota.disk.allocated - quota.disk.used;
+  const remainCPU = quota.cpu.limit - quota.cpu.allocated;
+  const remainRAM = quota.ram.limit - quota.ram.allocated;
+  const remainDisk = quota.disk.limit - quota.disk.allocated;
 
   const selectedTemplate = templates.find(t => t.id === config.templateId);
 
@@ -50,42 +56,30 @@ export default function CreateVMPage() {
 
   const handleCreate = async () => {
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setLoading(false);
-
-    const newVM = {
-      id: `vm-${Date.now()}`,
-      name: config.name,
-      template: selectedTemplate!.image,
-      status: 'CREATING' as const,
-      cpu: config.cpu,
-      ram: config.ram,
-      disk: config.disk,
-      ip: '—',
-      uptime: '—',
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString(),
-      provider: 'Docker',
-    };
-
-    setTenants(tenants.map(t =>
-      t.id === activeTenant.id
-        ? {
-            ...t,
-            vms: [...t.vms, newVM],
-            quota: {
-              ...t.quota,
-              cpu: { ...t.quota.cpu, used: t.quota.cpu.used + config.cpu },
-              ram: { ...t.quota.ram, used: t.quota.ram.used + config.ram },
-              disk: { ...t.quota.disk, used: t.quota.disk.used + config.disk },
-              vms: { ...t.quota.vms, used: t.quota.vms.used + 1, allocated: t.quota.vms.allocated + 1 },
-            },
-          }
-        : t
-    ));
-
-    addToast({ type: 'success', title: 'ВМ создаётся', message: config.name });
-    navigate('/tenant/vms');
+    try {
+      await api.createVM({
+        name: config.name,
+        templateId: config.templateId,
+        cpu: config.cpu,
+        ramGb: config.ram,
+        diskGb: config.disk,
+      });
+      await refreshTenants();
+      addToast({ type: 'success', title: 'ВМ создаётся', message: config.name });
+      navigate('/tenant/vms');
+    } catch (err: any) {
+      if (err.body?.error === 'QUOTA_EXCEEDED') {
+        const details = err.body.details || [];
+        const msgs = details.map((d: any) => `${d.field}: запрошено ${d.requested}, доступно ${d.remaining}`);
+        setErrors({ quota: msgs.join('; ') });
+        addToast({ type: 'error', title: 'Превышение квоты', message: msgs.join('; ') });
+        setStep(2);
+      } else {
+        addToast({ type: 'error', title: 'Ошибка создания', message: err.message });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const categoryColors: Record<string, string> = {

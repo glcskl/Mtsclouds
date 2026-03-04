@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         String     // platform_admin, tenant_admin, user
+  tenantId     String?
+  tenant       Tenant?    @relation(fields: [tenantId], references: [id])
+  auditLogs    AuditLog[]
+  createdAt    DateTime   @default(now())
+}
+
+model Tenant {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  status    String     @default("ACTIVE")
+  users     User[]
+  vdcs      VDC[]
+  vms       VM[]
+  auditLogs AuditLog[]
+  createdAt DateTime   @default(now())
+}
+
+model VDC {
+  id       String  @id @default(cuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  name     String
+  quota    Quota?
+  vms      VM[]
+}
+
+model Quota {
+  id           String @id @default(cuid())
+  vdcId        String @unique
+  vdc          VDC    @relation(fields: [vdcId], references: [id])
+  cpuLimit     Int
+  ramLimitGb   Int
+  diskLimitGb  Int
+  vmCountLimit Int
+}
+
+model VM {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  vdcId       String
+  vdc         VDC      @relation(fields: [vdcId], references: [id])
+  name        String
+  templateId  String
+  template    Template @relation(fields: [templateId], references: [id])
+  status      String   @default("CREATING")
+  cpu         Int
+  ramGb       Int
+  diskGb      Int
+  ip          String?
+  port        Int?
+  provider    String   @default("mock")
+  providerRef String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Template {
+  id            String @id @default(cuid())
+  name          String
+  description   String
+  image         String
+  defaultCpu    Int
+  defaultRamGb  Int
+  defaultDiskGb Int
+  category      String
+  vms           VM[]
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String
+  actorUser   User     @relation(fields: [actorUserId], references: [id])
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  action      String
+  entityType  String
+  entityId    String
+  meta        String?
+  level       String   @default("info")
+  createdAt   DateTime @default(now())
+}

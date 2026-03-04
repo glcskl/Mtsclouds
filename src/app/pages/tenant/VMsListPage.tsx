@@ -5,6 +5,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Plus, Search, Server, Play, Square, Maximize2, Trash2, MoreHorizontal, Eye, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { VM, VMStatus } from '../../data/mockData';
+import { api } from '../../api/client';
 
 const statusFilters: (VMStatus | 'ALL')[] = ['ALL', 'RUNNING', 'STOPPED', 'ERROR', 'CREATING'];
 
@@ -33,30 +34,38 @@ export default function VMsListPage() {
     setShowVMDrawer(true);
   };
 
+  const { refreshTenants } = useApp();
+
   const updateVMStatus = async (vmId: string, newStatus: VMStatus) => {
     setLoading(l => ({ ...l, [vmId]: true }));
-    await new Promise(r => setTimeout(r, 800));
-    setTenants(tenants.map(t =>
-      t.id === activeTenant.id
-        ? { ...t, vms: t.vms.map(v => v.id === vmId ? { ...v, status: newStatus, updatedAt: new Date().toISOString() } : v) }
-        : t
-    ));
-    setLoading(l => ({ ...l, [vmId]: false }));
-    addToast({ type: 'success', title: `ВМ ${newStatus === 'RUNNING' ? 'запущена' : 'остановлена'}` });
-    setOpenMenu(null);
+    try {
+      if (newStatus === 'RUNNING') {
+        await api.startVM(vmId);
+      } else {
+        await api.stopVM(vmId);
+      }
+      await refreshTenants();
+      addToast({ type: 'success', title: `ВМ ${newStatus === 'RUNNING' ? 'запущена' : 'остановлена'}` });
+    } catch (err: any) {
+      addToast({ type: 'error', title: 'Ошибка', message: err.message });
+    } finally {
+      setLoading(l => ({ ...l, [vmId]: false }));
+      setOpenMenu(null);
+    }
   };
 
   const deleteVM = (vm: VM) => {
     setDeleteTarget({
       type: 'ВМ',
       name: vm.name,
-      onConfirm: () => {
-        setTenants(tenants.map(t =>
-          t.id === activeTenant.id
-            ? { ...t, vms: t.vms.filter(v => v.id !== vm.id) }
-            : t
-        ));
-        addToast({ type: 'success', title: 'ВМ удалена', message: vm.name });
+      onConfirm: async () => {
+        try {
+          await api.deleteVM(vm.id);
+          await refreshTenants();
+          addToast({ type: 'success', title: 'ВМ удалена', message: vm.name });
+        } catch (err: any) {
+          addToast({ type: 'error', title: 'Ошибка удаления', message: err.message });
+        }
       },
     });
     setShowDeleteModal(true);

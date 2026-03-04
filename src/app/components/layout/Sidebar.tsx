@@ -6,6 +6,7 @@ import {
   ChevronDown, Shield
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../api/client';
 
 interface NavItem {
   icon: React.ElementType;
@@ -35,7 +36,8 @@ export function Sidebar() {
   const isAdmin = currentUser?.role === 'platform_admin';
   const navItems = isAdmin ? adminNav : tenantNav;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await api.logout(); } catch {}
     setCurrentUser(null);
     navigate('/login');
   };

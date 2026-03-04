@@ -5,6 +5,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Plus, Search, MoreHorizontal, Eye, Pencil, Ban, ChevronUp, ChevronDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Tenant } from '../../data/mockData';
+import { api } from '../../api/client';
 
 type SortKey = 'name' | 'vdc' | 'status' | 'vms';
 type SortDir = 'asc' | 'desc';
@@ -36,11 +37,17 @@ export default function TenantsListPage() {
       return 0;
     });
 
-  const toggleDisable = (tenant: Tenant) => {
-    setTenants(tenants.map(t =>
-      t.id === tenant.id ? { ...t, status: t.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE' } : t
-    ));
-    addToast({ type: 'success', title: `Организация ${tenant.name} обновлена` });
+  const { refreshTenants } = useApp();
+
+  const toggleDisable = async (tenant: Tenant) => {
+    try {
+      const newStatus = tenant.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
+      await api.updateTenant(tenant.id, { status: newStatus });
+      await refreshTenants();
+      addToast({ type: 'success', title: `Организация ${tenant.name} обновлена` });
+    } catch (err: any) {
+      addToast({ type: 'error', title: 'Ошибка', message: err.message });
+    }
     setOpenMenu(null);
   };
 

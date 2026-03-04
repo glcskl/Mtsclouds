@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppShell } from '../../components/layout/AppShell';
 import { Activity, Search } from 'lucide-react';
-import { auditLog } from '../../data/mockData';
+import { auditLog as fallbackAuditLog } from '../../data/mockData';
+import { api } from '../../api/client';
 
 const levelConfig = {
   info:    { label: 'INFO',    bg: 'bg-[#E0F2FE]', text: 'text-[#0369A1]' },
@@ -11,6 +12,12 @@ const levelConfig = {
 
 export default function AuditLogPage() {
   const [search, setSearch] = useState('');
+  const [auditLog, setAuditLog] = useState(fallbackAuditLog);
+
+  useEffect(() => {
+    api.getAuditLog().then(setAuditLog).catch(() => {});
+  }, []);
+
   const filtered = auditLog.filter(a =>
     a.action.toLowerCase().includes(search.toLowerCase()) ||
     a.user.toLowerCase().includes(search.toLowerCase()) ||

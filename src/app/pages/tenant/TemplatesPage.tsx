@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { AppShell } from '../../components/layout/AppShell';
 import { Plus, Server } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { templates } from '../../data/mockData';
+import { templates as fallbackTemplates } from '../../data/mockData';
+import { api } from '../../api/client';
 
 const categoryColors: Record<string, { bg: string; text: string }> = {
   OS:         { bg: 'bg-[#EFF6FF]', text: 'text-[#2563EB]' },
@@ -17,6 +18,11 @@ const categoryColors: Record<string, { bg: string; text: string }> = {
 export default function TemplatesPage() {
   const navigate = useNavigate();
   const { activeTenant } = useApp();
+  const [templates, setTemplates] = useState(fallbackTemplates);
+
+  useEffect(() => {
+    api.getTemplates().then(setTemplates).catch(() => {});
+  }, []);
 
   return (
     <AppShell breadcrumbs={[activeTenant?.name || '', 'Шаблоны']}>

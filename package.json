@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "dev:server": "cd server && npx tsx watch src/index.ts",
+    "dev:all": "npx concurrently -n API,UI -c blue,green \"npm run dev:server\" \"npm run dev\"",
+    "setup": "npm install && cd server && npm run setup",
+    "seed": "cd server && npx tsx src/seed.ts"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

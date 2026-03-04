@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppShell } from '../../components/layout/AppShell';
 import { MetricCard } from '../../components/ui/MetricCard';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Building2, Server, Cpu, AlertTriangle, Activity } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { auditLog, cpuChartData } from '../../data/mockData';
+import { auditLog as fallbackAuditLog, cpuChartData } from '../../data/mockData';
+import { api } from '../../api/client';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
@@ -17,6 +18,11 @@ const levelColors: Record<string, string> = {
 
 export default function AdminOverviewPage() {
   const { tenants } = useApp();
+  const [auditLog, setAuditLog] = useState(fallbackAuditLog);
+
+  useEffect(() => {
+    api.getAuditLog().then(setAuditLog).catch(() => {});
+  }, []);
 
   const totalVMs = tenants.reduce((sum, t) => sum + t.vms.length, 0);
   const runningVMs = tenants.reduce((sum, t) => sum + t.vms.filter(v => v.status === 'RUNNING').length, 0);

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { AppShell } from '../../components/layout/AppShell';
 import { ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../api/client';
 
 interface FormData {
   name: string;
@@ -56,45 +57,42 @@ export default function CreateTenantPage() {
     return Object.keys(errs).length === 0;
   };
 
+  const { refreshTenants } = useApp();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    setLoading(false);
-
-    if (isEdit && existing) {
-      setTenants(tenants.map(t => t.id === id ? {
-        ...t,
-        name: form.name,
-        vdc: form.vdc,
-        quota: {
-          cpu: { ...t.quota.cpu, limit: Number(form.cpuLimit) },
-          ram: { ...t.quota.ram, limit: Number(form.ramLimit) },
-          disk: { ...t.quota.disk, limit: Number(form.diskLimit) },
-          vms: { ...t.quota.vms, limit: Number(form.vmLimit) },
-        },
-      } : t));
-      addToast({ type: 'success', title: 'Организация обновлена', message: form.name });
-      navigate(`/admin/tenants/${id}`);
-    } else {
-      const newTenant = {
-        id: `tenant-${Date.now()}`,
-        name: form.name,
-        vdc: form.vdc,
-        status: 'ACTIVE' as const,
-        createdAt: new Date().toISOString().split('T')[0],
-        quota: {
-          cpu: { limit: Number(form.cpuLimit), allocated: 0, used: 0 },
-          ram: { limit: Number(form.ramLimit), allocated: 0, used: 0 },
-          disk: { limit: Number(form.diskLimit), allocated: 0, used: 0 },
-          vms: { limit: Number(form.vmLimit), allocated: 0, used: 0 },
-        },
-        vms: [],
-      };
-      setTenants([...tenants, newTenant]);
-      addToast({ type: 'success', title: 'Организация создана', message: form.name });
-      navigate('/admin/tenants');
+    try {
+      if (isEdit && id) {
+        await api.updateTenant(id, {
+          name: form.name,
+          vdc: form.vdc,
+          cpuLimit: Number(form.cpuLimit),
+          ramLimit: Number(form.ramLimit),
+          diskLimit: Number(form.diskLimit),
+          vmLimit: Number(form.vmLimit),
+        });
+        await refreshTenants();
+        addToast({ type: 'success', title: 'Организация обновлена', message: form.name });
+        navigate(`/admin/tenants/${id}`);
+      } else {
+        await api.createTenant({
+          name: form.name,
+          vdc: form.vdc,
+          cpuLimit: Number(form.cpuLimit),
+          ramLimit: Number(form.ramLimit),
+          diskLimit: Number(form.diskLimit),
+          vmLimit: Number(form.vmLimit),
+        });
+        await refreshTenants();
+        addToast({ type: 'success', title: 'Организация создана', message: form.name });
+        navigate('/admin/tenants');
+      }
+    } catch (err: any) {
+      addToast({ type: 'error', title: 'Ошибка', message: err.message });
+    } finally {
+      setLoading(false);
     }
   };
 

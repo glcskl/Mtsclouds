@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { mockTenants, mockUsers, Tenant, User, VM, UserRole } from '../data/mockData';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { Tenant, User, VM, UserRole } from '../data/mockData';
+import { api } from '../api/client';
 
 interface AppContextType {
   currentUser: User | null;
@@ -20,6 +21,8 @@ interface AppContextType {
   setShowDeleteModal: (show: boolean) => void;
   deleteTarget: { type: string; name: string; onConfirm: () => void } | null;
   setDeleteTarget: (target: { type: string; name: string; onConfirm: () => void } | null) => void;
+  refreshTenants: () => Promise<void>;
+  loading: boolean;
 }
 
 export interface Toast {
@@ -33,13 +36,14 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [tenants, setTenants] = useState<Tenant[]>(mockTenants);
-  const [activeTenantId, setActiveTenantId] = useState<string>('tenant-1');
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [activeTenantId, setActiveTenantId] = useState<string>('');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [selectedVM, setSelectedVM] = useState<VM | null>(null);
   const [showVMDrawer, setShowVMDrawer] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: string; name: string; onConfirm: () => void } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const activeTenant = tenants.find(t => t.id === activeTenantId);
 
@@ -53,6 +57,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
+  const refreshTenants = useCallback(async () => {
+    try {
+      const data = await api.getTenants();
+      setTenants(data);
+    } catch {
+      // Not logged in or error — keep empty
+    }
+  }, []);
+
+  // Check existing session on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { user } = await api.me();
+        setCurrentUser(user);
+        if (user.tenant) setActiveTenantId(user.tenant);
+        await refreshTenants();
+      } catch {
+        // No session — user needs to login
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [refreshTenants]);
+
+  // When user logs in, refresh tenants
+  useEffect(() => {
+    if (currentUser) {
+      refreshTenants();
+    }
+  }, [currentUser, refreshTenants]);
+
   return (
     <AppContext.Provider value={{
       currentUser, setCurrentUser,
@@ -64,6 +100,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       showVMDrawer, setShowVMDrawer,
       showDeleteModal, setShowDeleteModal,
       deleteTarget, setDeleteTarget,
+      refreshTenants,
+      loading,
     }}>
       {children}
     </AppContext.Provider>
