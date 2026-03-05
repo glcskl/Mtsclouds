@@ -1,35 +1,95 @@
-import React, { useState } from 'react';
-import { Check, Zap, TrendingUp, Award, Sparkles } from 'lucide-react';
-import { tariffPlans } from '../data/mockData';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Check, Zap, TrendingUp, Award, Sparkles, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { useApp } from '../context/AppContext';
+import { api } from '../api/client';
+import { formatBynParts } from '../utils/money';
+
+type TariffPlan = {
+  id: string;
+  name: string;
+  description: string;
+  priceMonthly: number;
+  cpu: number;
+  ramGb: number;
+  diskGb: number;
+  vms: number;
+  bandwidthMbit: number;
+  support: string;
+  features: string[];
+  popular?: boolean;
+  sortOrder?: number;
+};
 
 export default function TariffPlansPage() {
   const navigate = useNavigate();
   const { currentUser } = useApp();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
-  const getPrice = (basePrice: number) => {
-    if (basePrice === 0) return 'По запросу';
-    const price = billingPeriod === 'yearly' ? basePrice * 12 * 0.85 : basePrice;
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: 'RUB',
-      minimumFractionDigits: 0,
-    }).format(price);
+  const [loading, setLoading] = useState(true);
+  const [tariffPlans, setTariffPlans] = useState<TariffPlan[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const plans = await api.getPublicTariffs();
+        setTariffPlans(plans);
+      } catch {
+        setTariffPlans([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const getDisplayPrice = (basePrice: number) => {
+    if (basePrice === 0) return null;
+    return billingPeriod === 'yearly' ? Math.round(basePrice * 12 * 0.85) : basePrice;
   };
 
-  const handlePlanSelect = (planId: string) => {
-    if (currentUser) {
-      navigate('/calculator');
+  const handlePlanSelect = (plan: TariffPlan) => {
+    if (plan.priceMonthly === 0) {
+      navigate(`/calculator?plan=${encodeURIComponent(plan.id)}`);
       return;
     }
-    navigate(`/register?plan=${encodeURIComponent(planId)}`);
+
+    if (currentUser) {
+      navigate(`/calculator?plan=${encodeURIComponent(plan.id)}`);
+      return;
+    }
+
+    navigate(`/register?plan=${encodeURIComponent(plan.id)}`);
   };
+
+  const goBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/');
+  };
+
+  const sortedPlans = useMemo(() => (
+    [...tariffPlans].sort((a, b) => {
+      const orderA = Number(a.sortOrder ?? 0);
+      const orderB = Number(b.sortOrder ?? 0);
+      if (orderA !== orderB) return orderA - orderB;
+      return String(a.name).localeCompare(String(b.name));
+    })
+  ), [tariffPlans]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-white to-[#FEE7E7] py-16 px-4">
       <div className="max-w-7xl mx-auto">
+        <button
+          onClick={goBack}
+          className="inline-flex items-center gap-2 px-4 h-9 rounded-lg border border-[#E2E8F0] bg-white text-[13px] font-medium text-[#475569] hover:bg-[#F8FAFC] transition-colors mb-8"
+        >
+          <ArrowLeft size={14} />
+          Назад
+        </button>
+
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FEE7E7] rounded-full mb-6">
@@ -71,7 +131,11 @@ export default function TariffPlansPage() {
 
         {/* Plans Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {tariffPlans.map((plan) => (
+          {loading ? (
+            <div className="col-span-full py-16 text-center text-[13px] text-[#94A3B8]">Загрузка тарифов...</div>
+          ) : sortedPlans.length === 0 ? (
+            <div className="col-span-full py-16 text-center text-[13px] text-[#94A3B8]">Нет доступных тарифов</div>
+          ) : sortedPlans.map((plan) => (
             <div
               key={plan.id}
               className={`relative bg-white rounded-2xl border-2 transition-all hover:shadow-2xl hover:-translate-y-1 ${
@@ -99,18 +163,24 @@ export default function TariffPlansPage() {
                 {/* Price */}
                 <div className="mb-6">
                   <div className="flex items-baseline gap-1">
-                    {plan.price > 0 ? (
+                    {plan.priceMonthly > 0 ? (
                       <>
-                        <span className="text-[36px] font-bold text-[#E30613]">
-                          {getPrice(plan.price).replace(/[^\d\s]/g, '')}
-                        </span>
-                        <span className="text-[14px] text-[#64748B]">₽</span>
+                        {(() => {
+                          const price = getDisplayPrice(plan.priceMonthly) || 0;
+                          const { number, currency } = formatBynParts(price, 0);
+                          return (
+                            <>
+                              <span className="text-[36px] font-bold text-[#E30613]">{number}</span>
+                              <span className="text-[14px] text-[#64748B]">{currency}</span>
+                            </>
+                          );
+                        })()}
                       </>
                     ) : (
                       <span className="text-[24px] font-bold text-[#E30613]">По запросу</span>
                     )}
                   </div>
-                  {plan.price > 0 && (
+                  {plan.priceMonthly > 0 && (
                     <p className="text-[12px] text-[#94A3B8] mt-1">
                       {billingPeriod === 'monthly' ? 'в месяц' : 'в год'}
                     </p>
@@ -126,11 +196,11 @@ export default function TariffPlansPage() {
                     </div>
                     <div>
                       <p className="text-[11px] text-[#64748B] mb-1">RAM</p>
-                      <p className="text-[16px] font-semibold text-[#0F172A]">{plan.ram} GB</p>
+                      <p className="text-[16px] font-semibold text-[#0F172A]">{plan.ramGb} GB</p>
                     </div>
                     <div>
                       <p className="text-[11px] text-[#64748B] mb-1">Диск</p>
-                      <p className="text-[16px] font-semibold text-[#0F172A]">{plan.disk} GB</p>
+                      <p className="text-[16px] font-semibold text-[#0F172A]">{plan.diskGb} GB</p>
                     </div>
                     <div>
                       <p className="text-[11px] text-[#64748B] mb-1">VMs</p>
@@ -153,14 +223,14 @@ export default function TariffPlansPage() {
 
                 {/* CTA */}
                 <button
-                  onClick={() => handlePlanSelect(plan.id)}
+                  onClick={() => handlePlanSelect(plan)}
                   className={`w-full h-11 rounded-lg text-[14px] font-medium transition-all ${
                     plan.popular
                       ? 'bg-[#E30613] hover:bg-[#C00510] text-white shadow-lg shadow-[#E30613]/20'
                       : 'bg-white hover:bg-[#F8FAFC] text-[#E30613] border-2 border-[#E30613]'
                   }`}
                 >
-                  {plan.price === 0 ? 'Связаться с нами' : 'Выбрать план'}
+                  {plan.priceMonthly === 0 ? 'Рассчитать' : 'Выбрать план'}
                 </button>
               </div>
             </div>

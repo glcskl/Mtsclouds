@@ -116,6 +116,28 @@ export const api = {
   getPricing: () =>
     request<{ cpu: number; ram: number; disk: number; bandwidth: number }>('/api/billing/pricing'),
 
+  updatePricing: (data: { cpu: number; ram: number; disk: number; bandwidth: number }) =>
+    request<{ cpu: number; ram: number; disk: number; bandwidth: number }>('/api/billing/pricing', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  // ─── Tariffs ─────────────────────────────────────────────
+  getPublicTariffs: () =>
+    request<any[]>('/api/tariffs/public'),
+
+  getTariffs: () =>
+    request<any[]>('/api/tariffs'),
+
+  createTariff: (data: any) =>
+    request<any>('/api/tariffs', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateTariff: (id: string, data: any) =>
+    request<any>(`/api/tariffs/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  disableTariff: (id: string) =>
+    request<{ ok: boolean }>(`/api/tariffs/${id}`, { method: 'DELETE' }),
+
   // ─── Infrastructure ──────────────────────────────────────
   getDockerInfo: () =>
     request<any>('/api/infrastructure/docker'),

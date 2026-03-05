@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { Eye, EyeOff, Shield, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Shield, Loader2, Brain, Calculator, CreditCard, Users, Server } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { api } from '../api/client';
 
@@ -52,17 +52,84 @@ export default function LoginPage() {
       className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-white to-[#FEE7E7] flex items-center justify-center p-4"
       style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
     >
-      <div className="w-full max-w-[420px]">
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-[#E30613] to-[#B00510] rounded-2xl flex items-center justify-center shadow-lg shadow-[#E30613]/30">
-            <Shield size={24} className="text-white" />
+      <div className="w-full max-w-[980px] grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        {/* Left marketing panel */}
+        <div className="hidden md:flex flex-col justify-between bg-gradient-to-br from-[#E30613] to-[#FF3B4F] rounded-3xl p-10 text-white shadow-2xl shadow-[#E30613]/25 min-h-[680px] overflow-hidden relative">
+          <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-28 -left-28 w-72 h-72 rounded-full bg-black/10 blur-2xl" />
+
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-10">
+              <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
+                <Shield size={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-[18px] font-semibold">МТС Cloud</h1>
+                <p className="text-[12px] text-white/75">Enterprise IaaS Platform</p>
+              </div>
+            </div>
+
+            <h2 className="text-[34px] font-bold leading-tight">
+              Управляйте облаком<br />как продуктом
+            </h2>
+            <p className="text-[14px] text-white/85 mt-4 leading-relaxed max-w-[420px]">
+              AI прогнозирование мощностей, прозрачный биллинг и управление командой — в одном интерфейсе.
+            </p>
+
+            <div className="mt-8 space-y-4">
+              {[
+                { icon: Brain, title: 'AI Прогноз', desc: 'Рекомендации по CPU/RAM/Disk под вашу нагрузку' },
+                { icon: CreditCard, title: 'Биллинг', desc: 'Стоимость считается по фактическим параметрам ВМ' },
+                { icon: Users, title: 'Команда', desc: 'Invite-only доступ и роли внутри организации' },
+                { icon: Server, title: 'ВМ на Docker', desc: 'Создание/старт/стоп и live-метрики' },
+              ].map((f) => (
+                <div key={f.title} className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+                    <f.icon size={16} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold">{f.title}</p>
+                    <p className="text-[12px] text-white/75 mt-0.5">{f.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-10 flex items-center gap-3">
+              <Link
+                to="/forecast"
+                className="inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-white text-[#E30613] text-[13px] font-bold hover:bg-[#F8FAFC] transition-colors shadow-xl"
+              >
+                <Brain size={16} />
+                AI Прогноз
+              </Link>
+              <Link
+                to="/calculator"
+                className="inline-flex items-center gap-2 px-5 h-11 rounded-xl border border-white/35 text-white text-[13px] font-bold hover:bg-white/10 transition-colors"
+              >
+                <Calculator size={16} />
+                Калькулятор
+              </Link>
+            </div>
           </div>
-          <div>
-            <h1 className="text-[24px] font-semibold text-[#0F172A]">МТС Cloud</h1>
-            <p className="text-[12px] text-[#64748B]">Enterprise IaaS Platform</p>
+
+          <div className="relative text-[12px] text-white/70">
+            Demo аккаунты доступны справа — используйте «быстрый вход».
           </div>
         </div>
+
+        {/* Right column */}
+        <div className="w-full max-w-[420px] md:max-w-none mx-auto">
+          {/* Logo (mobile) */}
+          <div className="flex items-center justify-center gap-3 mb-8 md:hidden">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#E30613] to-[#B00510] rounded-2xl flex items-center justify-center shadow-lg shadow-[#E30613]/30">
+              <Shield size={24} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-[24px] font-semibold text-[#0F172A]">МТС Cloud</h1>
+              <p className="text-[12px] text-[#64748B]">Enterprise IaaS Platform</p>
+            </div>
+          </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xl p-8">
@@ -159,6 +226,7 @@ export default function LoginPage() {
             </Link>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

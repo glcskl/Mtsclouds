@@ -354,7 +354,7 @@ export const tariffPlans: TariffPlan[] = [
     id: 'tariff-starter',
     name: 'Starter',
     description: 'Для небольших проектов и тестирования',
-    price: 2990,
+    price: 598,
     cpu: 4,
     ram: 8,
     disk: 100,
@@ -375,7 +375,7 @@ export const tariffPlans: TariffPlan[] = [
     id: 'tariff-business',
     name: 'Business',
     description: 'Оптимальный для бизнес-приложений',
-    price: 7990,
+    price: 1598,
     cpu: 16,
     ram: 32,
     disk: 500,
@@ -398,7 +398,7 @@ export const tariffPlans: TariffPlan[] = [
     id: 'tariff-enterprise',
     name: 'Enterprise',
     description: 'Для высоконагруженных систем',
-    price: 19990,
+    price: 3998,
     cpu: 64,
     ram: 128,
     disk: 2000,
@@ -458,10 +458,10 @@ export const userLoadLevels = [
   { id: 'extreme', name: 'Экстремальная (100K+)', multiplier: 8 },
 ];
 
-// Прайс лист (руб/час)
+// Прайс лист (Br/час)
 export const pricing = {
-  cpu: 5, // за 1 vCPU
-  ram: 3, // за 1 GB
-  disk: 0.5, // за 1 GB SSD
-  bandwidth: 2, // за 1 Mbit/s
+  cpu: 1, // за 1 vCPU
+  ram: 0.6, // за 1 GB
+  disk: 0.1, // за 1 GB SSD
+  bandwidth: 0.4, // за 1 Mbit/s
 };

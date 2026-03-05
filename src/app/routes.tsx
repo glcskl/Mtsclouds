@@ -13,6 +13,7 @@ import TenantDetailsPage from './pages/admin/TenantDetailsPage';
 import CreateTenantPage from './pages/admin/CreateTenantPage';
 import InfrastructurePage from './pages/admin/InfrastructurePage';
 import AuditLogPage from './pages/admin/AuditLogPage';
+import PricingAndTariffsPage from './pages/admin/PricingAndTariffsPage';
 import TenantDashboardPage from './pages/tenant/TenantDashboardPage';
 import VMsListPage from './pages/tenant/VMsListPage';
 import CreateVMPage from './pages/tenant/CreateVMPage';
@@ -112,6 +113,14 @@ export const router = createBrowserRouter([
     Component: () => (
       <RequirePlatformAdmin>
         <AuditLogPage />
+      </RequirePlatformAdmin>
+    ),
+  },
+  {
+    path: '/admin/pricing',
+    Component: () => (
+      <RequirePlatformAdmin>
+        <PricingAndTariffsPage />
       </RequirePlatformAdmin>
     ),
   },

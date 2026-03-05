@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import { useApp } from '../../context/AppContext';
 import { Loader2, CreditCard } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { formatByn } from '../../utils/money';
 
 type BillingItem = {
   vmId: string;
@@ -24,11 +25,7 @@ export default function BillingPage() {
   const [total, setTotal] = useState(0);
   const [breakdown, setBreakdown] = useState<BillingItem[]>([]);
 
-  const formatCurrency = (value: number) => new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    minimumFractionDigits: 2,
-  }).format(value);
+  const formatCurrency = (value: number) => formatByn(value, 2);
 
   useEffect(() => {
     (async () => {

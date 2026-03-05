@@ -31,6 +31,13 @@ export default function LandingPage() {
                 <p className="text-[11px] text-[#64748B]">Enterprise IaaS Platform</p>
               </div>
             </div>
+
+            <div className="hidden md:flex items-center gap-6 text-[14px] font-medium text-[#475569]">
+              <Link to="/forecast" className="hover:text-[#E30613] transition-colors">AI Прогноз</Link>
+              <Link to="/calculator" className="hover:text-[#E30613] transition-colors">Калькулятор</Link>
+              <Link to="/tariffs" className="hover:text-[#E30613] transition-colors">Тарифы</Link>
+            </div>
+
             <div className="flex items-center gap-4">
               <Link 
                 to="/login"
@@ -69,6 +76,12 @@ export default function LandingPage() {
               className="px-8 py-4 bg-gradient-to-r from-[#E30613] to-[#FF3B4F] text-white rounded-xl text-[16px] font-bold shadow-2xl shadow-[#E30613]/40 hover:shadow-[#E30613]/60 hover:-translate-y-0.5 transition-all"
             >
               Создать аккаунт
+            </Link>
+            <Link
+              to="/forecast"
+              className="px-8 py-4 bg-white border-2 border-[#0F172A] text-[#0F172A] rounded-xl text-[16px] font-bold hover:bg-[#F8FAFC] transition-all"
+            >
+              AI Прогноз
             </Link>
             <Link 
               to="/tariffs"

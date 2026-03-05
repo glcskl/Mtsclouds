@@ -16,6 +16,7 @@ async function main() {
   await prisma.tenant.deleteMany();
   await prisma.template.deleteMany();
   await prisma.pricingConfig.deleteMany();
+  await prisma.tariffPlan.deleteMany();
 
   const hash = bcrypt.hashSync('admin123', 10);
 
@@ -42,11 +43,124 @@ async function main() {
   // ─── Pricing ───────────────────────────────────────────────
   await prisma.pricingConfig.createMany({
     data: [
-      { resource: 'cpu', pricePerHour: 5 },
-      { resource: 'ram', pricePerHour: 3 },
-      { resource: 'disk', pricePerHour: 0.5 },
-      { resource: 'bandwidth', pricePerHour: 2 },
+      { resource: 'cpu', pricePerHour: 1 },
+      { resource: 'ram', pricePerHour: 0.6 },
+      { resource: 'disk', pricePerHour: 0.1 },
+      { resource: 'bandwidth', pricePerHour: 0.4 },
     ],
+  });
+
+  // ─── Tariff Plans ─────────────────────────────────────────
+  await prisma.tariffPlan.create({
+    data: {
+      id: 'tariff-starter',
+      name: 'Starter',
+      description: 'Для небольших проектов и тестирования',
+      priceMonthly: 598,
+      cpu: 4,
+      ramGb: 8,
+      diskGb: 100,
+      vms: 5,
+      bandwidthMbit: 100,
+      support: 'Email',
+      popular: false,
+      status: 'ACTIVE',
+      sortOrder: 10,
+      features: [
+        '4 vCPU ядра',
+        '8 GB RAM',
+        '100 GB SSD',
+        'До 5 виртуальных машин',
+        '100 Mbit/s канал',
+        'Email поддержка',
+        'Базовый мониторинг',
+      ],
+    },
+  });
+
+  await prisma.tariffPlan.create({
+    data: {
+      id: 'tariff-business',
+      name: 'Business',
+      description: 'Оптимальный для бизнес-приложений',
+      priceMonthly: 1598,
+      cpu: 16,
+      ramGb: 32,
+      diskGb: 500,
+      vms: 20,
+      bandwidthMbit: 500,
+      support: '24/7 Chat',
+      popular: true,
+      status: 'ACTIVE',
+      sortOrder: 20,
+      features: [
+        '16 vCPU ядер',
+        '32 GB RAM',
+        '500 GB SSD',
+        'До 20 виртуальных машин',
+        '500 Mbit/s канал',
+        '24/7 онлайн-чат',
+        'Расширенный мониторинг',
+        'Еженедельные бэкапы',
+      ],
+    },
+  });
+
+  await prisma.tariffPlan.create({
+    data: {
+      id: 'tariff-enterprise',
+      name: 'Enterprise',
+      description: 'Для высоконагруженных систем',
+      priceMonthly: 3998,
+      cpu: 64,
+      ramGb: 128,
+      diskGb: 2000,
+      vms: 100,
+      bandwidthMbit: 1000,
+      support: '24/7 Phone',
+      popular: false,
+      status: 'ACTIVE',
+      sortOrder: 30,
+      features: [
+        '64 vCPU ядра',
+        '128 GB RAM',
+        '2 TB SSD',
+        'До 100 виртуальных машин',
+        '1 Gbit/s канал',
+        '24/7 телефонная поддержка',
+        'Персональный менеджер',
+        'Ежедневные бэкапы',
+        'SLA 99.95%',
+        'Dedicated инфраструктура',
+      ],
+    },
+  });
+
+  await prisma.tariffPlan.create({
+    data: {
+      id: 'tariff-custom',
+      name: 'Custom',
+      description: 'Индивидуальное решение под ваши задачи',
+      priceMonthly: 0,
+      cpu: 0,
+      ramGb: 0,
+      diskGb: 0,
+      vms: 0,
+      bandwidthMbit: 0,
+      support: 'Dedicated',
+      popular: false,
+      status: 'ACTIVE',
+      sortOrder: 40,
+      features: [
+        'Кастомные конфигурации',
+        'Неограниченные ресурсы',
+        'Выделенное оборудование',
+        'Индивидуальные SLA',
+        'Персональная команда поддержки',
+        'Консультации архитектора',
+        'Миграция инфраструктуры',
+      ],
+    },
   });
 
   // ─── Tenants ───────────────────────────────────────────────

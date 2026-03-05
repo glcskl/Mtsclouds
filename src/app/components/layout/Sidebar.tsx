@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router';
 import {
   LayoutDashboard, Server, FileText, Users, CreditCard,
   Building2, Network, ClipboardList, Settings, LogOut,
-  ChevronDown, Shield
+  Shield, Brain, Calculator
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
@@ -18,12 +18,14 @@ interface NavItem {
 const adminNav: NavItem[] = [
   { icon: LayoutDashboard, label: 'Обзор', to: '/admin/overview' },
   { icon: Building2, label: 'Организации', to: '/admin/tenants' },
+  { icon: Settings, label: 'Цены и тарифы', to: '/admin/pricing' },
   { icon: Network, label: 'Инфраструктура', to: '/admin/infrastructure' },
   { icon: ClipboardList, label: 'Журнал аудита', to: '/admin/audit' },
 ];
 
 const tenantNav: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/tenant/dashboard' },
+  { icon: Brain, label: 'AI Прогноз', to: '/forecast', badge: 'AI' },
   { icon: Server, label: 'Виртуальные машины', to: '/tenant/vms' },
   { icon: FileText, label: 'Шаблоны', to: '/tenant/templates' },
   { icon: Users, label: 'Пользователи', to: '/tenant/users' },
@@ -94,6 +96,56 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* Quick actions */}
+      <div className="px-3 pb-4">
+        <div className="rounded-xl border border-[#E2E8F0] bg-gradient-to-br from-[#F8FAFC] to-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">Быстрые действия</p>
+          <div className="space-y-2">
+            {!isAdmin ? (
+              <button
+                onClick={() => navigate('/forecast')}
+                className="w-full flex items-center gap-2 px-3 h-9 rounded-lg bg-gradient-to-r from-[#E30613] to-[#FF3B4F] text-white text-[12px] font-semibold shadow-lg shadow-[#E30613]/20 hover:shadow-[#E30613]/35 transition-all"
+              >
+                <Brain size={14} />
+                AI Прогноз
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/admin/pricing')}
+                className="w-full flex items-center gap-2 px-3 h-9 rounded-lg bg-gradient-to-r from-[#E30613] to-[#FF3B4F] text-white text-[12px] font-semibold shadow-lg shadow-[#E30613]/20 hover:shadow-[#E30613]/35 transition-all"
+              >
+                <Settings size={14} />
+                Цены и тарифы
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/calculator')}
+              className="w-full flex items-center gap-2 px-3 h-9 rounded-lg border border-[#E2E8F0] bg-white text-[12px] font-medium text-[#475569] hover:bg-[#F8FAFC] transition-colors"
+            >
+              <Calculator size={14} className="text-[#E30613]" />
+              Калькулятор
+            </button>
+            {isAdmin ? (
+              <button
+                onClick={() => navigate('/admin/tenants')}
+                className="w-full flex items-center gap-2 px-3 h-9 rounded-lg border border-[#E2E8F0] bg-white text-[12px] font-medium text-[#475569] hover:bg-[#F8FAFC] transition-colors"
+              >
+                <Building2 size={14} className="text-[#E30613]" />
+                Организации
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/tenant/vms/new')}
+                className="w-full flex items-center gap-2 px-3 h-9 rounded-lg border border-[#E2E8F0] bg-white text-[12px] font-medium text-[#475569] hover:bg-[#F8FAFC] transition-colors"
+              >
+                <Server size={14} className="text-[#E30613]" />
+                Создать ВМ
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Bottom: user info */}
       <div className="px-3 py-4 border-t border-[#E2E8F0]">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router';
-import { Eye, EyeOff, Loader2, CheckCircle2, Building2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle2, Building2, ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
 
 type InviteInfo = {
@@ -97,6 +97,14 @@ export default function RegisterPage() {
     setSubmitError('');
     if (step === 'credentials') setStep('info');
     else if (step === 'organization') setStep('credentials');
+  };
+
+  const goBackToPrev = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -198,6 +206,14 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
       <div className="w-full max-w-[520px]">
+        <button
+          onClick={goBackToPrev}
+          className="inline-flex items-center gap-2 px-4 h-9 rounded-lg border border-[#E2E8F0] bg-white text-[13px] font-medium text-[#475569] hover:bg-[#F8FAFC] transition-colors mb-8"
+        >
+          <ArrowLeft size={14} />
+          Назад
+        </button>
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-[#E30613] to-[#B00510] rounded-2xl mb-4 shadow-lg shadow-[#E30613]/20">

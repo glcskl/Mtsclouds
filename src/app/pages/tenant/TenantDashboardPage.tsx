@@ -4,7 +4,7 @@ import { AppShell } from '../../components/layout/AppShell';
 import { MetricCard } from '../../components/ui/MetricCard';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { QuotaBar } from '../../components/ui/QuotaBar';
-import { Plus, FileText, Server, Play, Square, MoreHorizontal } from 'lucide-react';
+import { Plus, FileText, Server, Play, Square, Brain } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export default function TenantDashboardPage() {
@@ -48,6 +48,24 @@ export default function TenantDashboardPage() {
               Создать ВМ
             </button>
           </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-[#E30613] to-[#FF3B4F] rounded-2xl p-6 text-white shadow-xl shadow-[#E30613]/15 flex items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center">
+              <Brain size={18} className="text-white" />
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold">AI Прогнозирование мощностей</p>
+              <p className="text-[12px] text-white/80 mt-0.5">Подберите оптимальные ресурсы под вашу нагрузку</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/forecast')}
+            className="flex items-center justify-center px-5 h-10 rounded-xl bg-white text-[#E30613] text-[13px] font-bold hover:bg-[#F8FAFC] transition-colors flex-shrink-0"
+          >
+            Открыть
+          </button>
         </div>
 
         {/* Quota metric cards */}

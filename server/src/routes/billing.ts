@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../db.js';
+import { createAuditLog } from './audit.js';
 
 export const billingRouter = Router();
 
@@ -11,10 +12,10 @@ type PricingMap = {
 };
 
 const DEFAULT_PRICING: PricingMap = {
-  cpu: 5,
-  ram: 3,
-  disk: 0.5,
-  bandwidth: 2,
+  cpu: 1,
+  ram: 0.6,
+  disk: 0.1,
+  bandwidth: 0.4,
 };
 
 function round2(value: number): number {
@@ -54,6 +55,71 @@ async function getPricingMap(): Promise<PricingMap> {
 billingRouter.get('/pricing', async (_req: Request, res: Response) => {
   const pricing = await getPricingMap();
   res.json(pricing);
+});
+
+// PATCH /api/billing/pricing (platform_admin)
+billingRouter.patch('/pricing', async (req: Request, res: Response) => {
+  const user = await getCurrentUser(req, res);
+  if (!user) return;
+
+  if (user.role !== 'platform_admin') {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+
+  const { cpu, ram, disk, bandwidth } = req.body ?? {};
+
+  const next = {
+    cpu: Number(cpu),
+    ram: Number(ram),
+    disk: Number(disk),
+    bandwidth: Number(bandwidth),
+  };
+
+  for (const [key, value] of Object.entries(next)) {
+    if (!Number.isFinite(value) || value < 0) {
+      res.status(400).json({ error: `${key} must be a non-negative number` });
+      return;
+    }
+  }
+
+  const before = await getPricingMap();
+
+  await prisma.$transaction([
+    prisma.pricingConfig.upsert({
+      where: { resource: 'cpu' },
+      create: { resource: 'cpu', pricePerHour: next.cpu },
+      update: { pricePerHour: next.cpu },
+    }),
+    prisma.pricingConfig.upsert({
+      where: { resource: 'ram' },
+      create: { resource: 'ram', pricePerHour: next.ram },
+      update: { pricePerHour: next.ram },
+    }),
+    prisma.pricingConfig.upsert({
+      where: { resource: 'disk' },
+      create: { resource: 'disk', pricePerHour: next.disk },
+      update: { pricePerHour: next.disk },
+    }),
+    prisma.pricingConfig.upsert({
+      where: { resource: 'bandwidth' },
+      create: { resource: 'bandwidth', pricePerHour: next.bandwidth },
+      update: { pricePerHour: next.bandwidth },
+    }),
+  ]);
+
+  const after = await getPricingMap();
+
+  await createAuditLog({
+    actorUserId: user.id,
+    tenantId: null,
+    action: 'Обновлены цены ресурсов',
+    entityType: 'pricing',
+    entityId: 'global',
+    meta: { before, after },
+  });
+
+  res.json(after);
 });
 
 // GET /api/billing/summary

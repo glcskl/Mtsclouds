@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { Calculator, DollarSign, TrendingUp, Calendar, Zap, Server } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { Calculator, DollarSign, TrendingUp, Calendar, Zap, Server, ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
+import { formatByn } from '../utils/money';
 
 const DEFAULT_PRICING = {
-  cpu: 5,
-  ram: 3,
-  disk: 0.5,
-  bandwidth: 2,
+  cpu: 1,
+  ram: 0.6,
+  disk: 0.1,
+  bandwidth: 0.4,
 };
 
 export default function CostCalculatorPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [cpu, setCpu] = useState(4);
   const [ram, setRam] = useState(8);
   const [disk, setDisk] = useState(100);
@@ -28,8 +30,37 @@ export default function CostCalculatorPage() {
   });
 
   useEffect(() => {
-    api.getPricing().then(setPricing).catch(() => setPricing(DEFAULT_PRICING));
+    const load = () => api.getPricing().then(setPricing).catch(() => setPricing(DEFAULT_PRICING));
+    load();
+    window.addEventListener('focus', load);
+    return () => window.removeEventListener('focus', load);
   }, []);
+
+  useEffect(() => {
+    const planId = searchParams.get('plan');
+    if (!planId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const plans = await api.getPublicTariffs();
+        const plan = plans.find((p: any) => p?.id === planId);
+        if (!plan || cancelled) return;
+
+        if (Number(plan.cpu) > 0) setCpu(Number(plan.cpu));
+        if (Number(plan.ramGb) > 0) setRam(Number(plan.ramGb));
+        if (Number(plan.diskGb) > 0) setDisk(Number(plan.diskGb));
+        if (Number(plan.bandwidthMbit) > 0) setBandwidth(Number(plan.bandwidthMbit));
+        setVmCount(1);
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
 
   useEffect(() => {
     const hourlyCost = (
@@ -47,19 +78,29 @@ export default function CostCalculatorPage() {
     });
   }, [cpu, ram, disk, bandwidth, vmCount, pricing]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: 'RUB',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) => formatByn(amount, 2);
 
   const customCost = hours * costs.hourly;
+
+  const goBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-white to-[#FEE7E7] py-12 px-4">
       <div className="max-w-7xl mx-auto">
+        <button
+          onClick={goBack}
+          className="inline-flex items-center gap-2 px-4 h-9 rounded-lg border border-[#E2E8F0] bg-white text-[13px] font-medium text-[#475569] hover:bg-[#F8FAFC] transition-colors mb-8"
+        >
+          <ArrowLeft size={14} />
+          Назад
+        </button>
+
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#E30613] to-[#FF3B4F] text-white rounded-full mb-6 shadow-lg shadow-[#E30613]/30">
