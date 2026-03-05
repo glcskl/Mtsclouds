@@ -27,10 +27,8 @@ export const api = {
     email: string;
     phone: string;
     password: string;
-    role: 'platform_admin' | 'tenant_admin' | 'user';
-    tenantId?: string;
-    organizationName?: string;
-    organizationVdc?: string;
+    organizationName: string;
+    organizationVdc: string;
   }) =>
     request<{ user: any }>('/api/auth/register', {
       method: 'POST',
@@ -42,9 +40,6 @@ export const api = {
 
   me: () =>
     request<{ user: any }>('/api/auth/me'),
-
-  getPublicTenants: () =>
-    request<Array<{ id: string; name: string }>>('/api/auth/tenants-list'),
 
   // ─── Tenants ─────────────────────────────────────────────
   getTenants: () =>
@@ -97,6 +92,22 @@ export const api = {
 
   deleteUser: (id: string) =>
     request<{ ok: boolean }>(`/api/users/${id}`, { method: 'DELETE' }),
+
+  // ─── Invites ─────────────────────────────────────────────
+  getInviteInfo: (token: string) =>
+    request<{ tenantName: string; email: string; role: string; expiresAt: string | null }>(`/api/invites/${encodeURIComponent(token)}`),
+
+  acceptInvite: (token: string, data: { firstName: string; lastName: string; password: string; phone?: string }) =>
+    request<{ user: any }>(`/api/invites/${encodeURIComponent(token)}/accept`, { method: 'POST', body: JSON.stringify(data) }),
+
+  getInvites: () =>
+    request<any[]>('/api/invites'),
+
+  createInvite: (data: { email: string; role: 'tenant_admin' | 'user'; expiresInDays?: number; tenantId?: string }) =>
+    request<any>('/api/invites', { method: 'POST', body: JSON.stringify(data) }),
+
+  revokeInvite: (id: string) =>
+    request<{ ok: boolean }>(`/api/invites/${id}`, { method: 'DELETE' }),
 
   // ─── Billing ─────────────────────────────────────────────
   getBillingSummary: (tenantId?: string) =>

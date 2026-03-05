@@ -12,6 +12,7 @@ services:
       - SESSION_SECRET=mts-cloud-hackathon-secret
       - PORT=3001
       - PROVIDER=${PROVIDER:-mock}
+      - PUBLIC_BASE_URL=http://localhost:5173
     volumes:
       # Mount docker socket for DockerProvider mode
       - /var/run/docker.sock:/var/run/docker.sock

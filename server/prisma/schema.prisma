@@ -16,6 +16,7 @@ model User {
   tenantId     String?
   tenant       Tenant?    @relation(fields: [tenantId], references: [id])
   auditLogs    AuditLog[]
+  createdInvites Invite[] @relation("CreatedInvites")
   createdAt    DateTime   @default(now())
 }
 
@@ -25,6 +26,7 @@ model Tenant {
   slug      String     @unique
   status    String     @default("ACTIVE")
   users     User[]
+  invites   Invite[]
   vdcs      VDC[]
   vms       VM[]
   auditLogs AuditLog[]
@@ -87,6 +89,27 @@ model PricingConfig {
   id           String @id @default(cuid())
   resource     String @unique
   pricePerHour Float
+}
+
+model Invite {
+  id              String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+
+  email            String
+  role             String   // tenant_admin | user
+  tokenHash        String   @unique
+
+  status           String   @default("PENDING") // PENDING | ACCEPTED | REVOKED | EXPIRED
+  createdByUserId  String?
+  createdByUser    User?    @relation("CreatedInvites", fields: [createdByUserId], references: [id])
+
+  createdAt        DateTime @default(now())
+  expiresAt        DateTime?
+  acceptedAt       DateTime?
+
+  @@index([tenantId, email])
+  @@index([tenantId, status])
 }
 
 model AuditLog {

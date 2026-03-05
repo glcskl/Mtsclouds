@@ -1,10 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate, Link, useSearchParams } from 'react-router';
 import { Eye, EyeOff, Loader2, CheckCircle2, Building2 } from 'lucide-react';
 import { api } from '../api/client';
 
+type InviteInfo = {
+  tenantName: string;
+  email: string;
+  role: string;
+  expiresAt: string | null;
+};
+
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('invite');
+  const inviteMode = Boolean(inviteToken);
   const [step, setStep] = useState<'info' | 'credentials' | 'organization'>('info');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -17,8 +27,6 @@ export default function RegisterPage() {
     phone: '',
     password: '',
     confirmPassword: '',
-    role: 'tenant_admin' as 'platform_admin' | 'tenant_admin' | 'user',
-    tenant: '',
     organizationName: '',
     organizationVdc: '',
   });
@@ -27,11 +35,25 @@ export default function RegisterPage() {
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
-  const [tenants, setTenants] = useState<Array<{ id: string; name: string }>>([]);
+  const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState('');
 
   useEffect(() => {
-    api.getPublicTenants().then(setTenants).catch(() => setTenants([]));
-  }, []);
+    if (!inviteToken) return;
+    setInviteLoading(true);
+    setInviteError('');
+    api.getInviteInfo(inviteToken)
+      .then(info => {
+        setInviteInfo(info);
+        setFormData(prev => ({ ...prev, email: info.email }));
+      })
+      .catch((err: any) => {
+        setInviteInfo(null);
+        setInviteError(err.body?.error || err.message || 'Инвайт недоступен');
+      })
+      .finally(() => setInviteLoading(false));
+  }, [inviteToken]);
 
   const validateStep = () => {
     const newErrors: Record<string, string> = {};
@@ -41,7 +63,7 @@ export default function RegisterPage() {
       if (!formData.lastName.trim()) newErrors.lastName = 'Введите фамилию';
       if (!formData.email.trim()) newErrors.email = 'Введите email';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Некорректный email';
-      if (!formData.phone.trim()) newErrors.phone = 'Введите телефон';
+      if (!inviteMode && !formData.phone.trim()) newErrors.phone = 'Введите телефон';
     }
 
     if (step === 'credentials') {
@@ -52,10 +74,10 @@ export default function RegisterPage() {
     }
 
     if (step === 'organization') {
-      if (formData.role !== 'platform_admin' && !formData.tenant && !formData.organizationName.trim()) {
-        newErrors.organizationName = 'Выберите или создайте организацию';
+      if (!inviteMode && !formData.organizationName.trim()) {
+        newErrors.organizationName = 'Введите название организации';
       }
-      if (formData.organizationName && !formData.organizationVdc.trim()) {
+      if (!inviteMode && formData.organizationName && !formData.organizationVdc.trim()) {
         newErrors.organizationVdc = 'Введите VDC идентификатор';
       }
     }
@@ -84,21 +106,24 @@ export default function RegisterPage() {
     setLoading(true);
     setSubmitError('');
     try {
-      await api.register({
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        password: formData.password,
-        role: formData.role,
-        tenantId: formData.role !== 'platform_admin' && formData.tenant ? formData.tenant : undefined,
-        organizationName: formData.role !== 'platform_admin' && !formData.tenant
-          ? formData.organizationName.trim() || undefined
-          : undefined,
-        organizationVdc: formData.role !== 'platform_admin' && !formData.tenant
-          ? formData.organizationVdc.trim() || undefined
-          : undefined,
-      });
+      if (inviteMode && inviteToken) {
+        await api.acceptInvite(inviteToken, {
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          phone: formData.phone.trim() || undefined,
+          password: formData.password,
+        });
+      } else {
+        await api.register({
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          password: formData.password,
+          organizationName: formData.organizationName.trim(),
+          organizationVdc: formData.organizationVdc.trim(),
+        });
+      }
 
       setSuccess(true);
       setTimeout(() => {
@@ -132,6 +157,44 @@ export default function RegisterPage() {
     );
   }
 
+  if (inviteMode && inviteLoading && !inviteInfo) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+        <div className="w-full max-w-[480px] bg-white rounded-2xl border border-[#E2E8F0] shadow-lg p-10 text-center">
+          <div className="flex items-center justify-center gap-2 text-[#94A3B8] text-[13px]">
+            <Loader2 size={16} className="animate-spin" />
+            Проверяем приглашение...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (inviteMode && inviteError) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+        <div className="w-full max-w-[520px] bg-white rounded-2xl border border-[#E2E8F0] shadow-lg p-10 text-center">
+          <h2 className="text-[22px] font-semibold text-[#0F172A] mb-2">Приглашение недоступно</h2>
+          <p className="text-[13px] text-[#64748B] mb-6">{inviteError}</p>
+          <div className="flex items-center justify-center gap-3">
+            <Link
+              to="/register"
+              className="px-5 h-10 inline-flex items-center justify-center rounded-lg border border-[#E2E8F0] text-[13px] font-medium text-[#475569] hover:bg-[#F8FAFC] transition-colors"
+            >
+              Создать организацию
+            </Link>
+            <Link
+              to="/login"
+              className="px-5 h-10 inline-flex items-center justify-center rounded-lg bg-[#E30613] text-[13px] font-medium text-white hover:bg-[#C00510] transition-colors"
+            >
+              Войти
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
       <div className="w-full max-w-[520px]">
@@ -140,8 +203,14 @@ export default function RegisterPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-[#E30613] to-[#B00510] rounded-2xl mb-4 shadow-lg shadow-[#E30613]/20">
             <Building2 size={28} className="text-white" />
           </div>
-          <h1 className="text-[28px] font-semibold text-[#0F172A] mb-2">Создание аккаунта</h1>
-          <p className="text-[14px] text-[#64748B]">МТС Cloud Platform — корпоративные решения</p>
+          <h1 className="text-[28px] font-semibold text-[#0F172A] mb-2">
+            {inviteMode ? 'Принять приглашение' : 'Создание организации'}
+          </h1>
+          <p className="text-[14px] text-[#64748B]">
+            {inviteMode && inviteInfo
+              ? `Организация: ${inviteInfo.tenantName}`
+              : 'МТС Cloud Platform — корпоративные решения'}
+          </p>
         </div>
 
         {/* Progress */}
@@ -198,8 +267,13 @@ export default function RegisterPage() {
                     value={formData.email}
                     onChange={e => setFormData({ ...formData, email: e.target.value })}
                     placeholder="ivan.petrov@company.ru"
+                    disabled={inviteMode}
                     className={`w-full h-11 px-4 rounded-lg border text-[14px] text-[#0F172A] placeholder:text-[#CBD5E1] outline-none transition-all ${
-                      errors.email ? 'border-[#E30613] bg-[#FFF5F5]' : 'border-[#E2E8F0] bg-white focus:border-[#E30613] focus:ring-2 focus:ring-[#E30613]/10'
+                      errors.email
+                        ? 'border-[#E30613] bg-[#FFF5F5]'
+                        : inviteMode
+                          ? 'border-[#E2E8F0] bg-[#F8FAFC] text-[#475569]'
+                          : 'border-[#E2E8F0] bg-white focus:border-[#E30613] focus:ring-2 focus:ring-[#E30613]/10'
                     }`}
                   />
                   {errors.email && <p className="mt-1.5 text-[11px] text-[#E30613]">{errors.email}</p>}
@@ -306,74 +380,68 @@ export default function RegisterPage() {
             {step === 'organization' && (
               <div className="space-y-5">
                 <div>
-                  <h3 className="text-[18px] font-semibold text-[#0F172A] mb-1">Организация</h3>
-                  <p className="text-[13px] text-[#64748B] mb-6">Выберите роль и организацию</p>
+                  <h3 className="text-[18px] font-semibold text-[#0F172A] mb-1">
+                    {inviteMode ? 'Приглашение' : 'Организация'}
+                  </h3>
+                  <p className="text-[13px] text-[#64748B] mb-6">
+                    {inviteMode ? 'Проверьте данные приглашения' : 'Введите данные новой организации'}
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-[13px] font-medium text-[#475569] mb-2">Роль</label>
-                  <select
-                    value={formData.role}
-                    onChange={e => setFormData({ ...formData, role: e.target.value as any })}
-                    className="w-full h-11 px-4 rounded-lg border border-[#E2E8F0] bg-white text-[14px] text-[#0F172A] outline-none focus:border-[#E30613] focus:ring-2 focus:ring-[#E30613]/10 transition-all"
-                  >
-                    <option value="tenant_admin">Администратор тенанта</option>
-                    <option value="user">Пользователь</option>
-                    <option value="platform_admin">Администратор платформы</option>
-                  </select>
-                </div>
-
-                {formData.role !== 'platform_admin' && (
+                {inviteMode ? (
+                  <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-5 space-y-3">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-[12px] text-[#64748B]">Организация</span>
+                      <span className="text-[13px] font-medium text-[#0F172A] text-right">{inviteInfo?.tenantName || '—'}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-[12px] text-[#64748B]">Email</span>
+                      <span className="text-[12px] font-mono text-[#0F172A] text-right">{inviteInfo?.email || formData.email || '—'}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-[12px] text-[#64748B]">Роль</span>
+                      <span className="text-[13px] font-medium text-[#0F172A] text-right">
+                        {inviteInfo?.role === 'tenant_admin' ? 'Tenant Admin' : 'User'}
+                      </span>
+                    </div>
+                    {inviteInfo?.expiresAt && (
+                      <div className="flex justify-between gap-4">
+                        <span className="text-[12px] text-[#64748B]">Действует до</span>
+                        <span className="text-[12px] text-[#0F172A] text-right">
+                          {new Date(inviteInfo.expiresAt).toLocaleString('ru', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
                   <>
                     <div>
-                      <label className="block text-[13px] font-medium text-[#475569] mb-2">Существующая организация</label>
-                      <select
-                        value={formData.tenant}
-                        onChange={e => setFormData({ ...formData, tenant: e.target.value, organizationName: '', organizationVdc: '' })}
-                        className="w-full h-11 px-4 rounded-lg border border-[#E2E8F0] bg-white text-[14px] text-[#0F172A] outline-none focus:border-[#E30613] focus:ring-2 focus:ring-[#E30613]/10 transition-all"
-                      >
-                        <option value="">Создать новую организацию...</option>
-                        {tenants.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
+                      <label className="block text-[13px] font-medium text-[#475569] mb-2">Название организации</label>
+                      <input
+                        type="text"
+                        value={formData.organizationName}
+                        onChange={e => setFormData({ ...formData, organizationName: e.target.value })}
+                        placeholder="ООО Рога и Копыта"
+                        className={`w-full h-11 px-4 rounded-lg border text-[14px] text-[#0F172A] placeholder:text-[#CBD5E1] outline-none transition-all ${
+                          errors.organizationName ? 'border-[#E30613] bg-[#FFF5F5]' : 'border-[#E2E8F0] bg-white focus:border-[#E30613] focus:ring-2 focus:ring-[#E30613]/10'
+                        }`}
+                      />
+                      {errors.organizationName && <p className="mt-1.5 text-[11px] text-[#E30613]">{errors.organizationName}</p>}
                     </div>
 
-                    {!formData.tenant && (
-                      <>
-                        <div className="border-t border-[#E2E8F0] pt-5">
-                          <p className="text-[12px] font-medium text-[#64748B] uppercase tracking-wide mb-4">Новая организация</p>
-                        </div>
-
-                        <div>
-                          <label className="block text-[13px] font-medium text-[#475569] mb-2">Название организации</label>
-                          <input
-                            type="text"
-                            value={formData.organizationName}
-                            onChange={e => setFormData({ ...formData, organizationName: e.target.value })}
-                            placeholder="ООО Рога и Копыта"
-                            className={`w-full h-11 px-4 rounded-lg border text-[14px] text-[#0F172A] placeholder:text-[#CBD5E1] outline-none transition-all ${
-                              errors.organizationName ? 'border-[#E30613] bg-[#FFF5F5]' : 'border-[#E2E8F0] bg-white focus:border-[#E30613] focus:ring-2 focus:ring-[#E30613]/10'
-                            }`}
-                          />
-                          {errors.organizationName && <p className="mt-1.5 text-[11px] text-[#E30613]">{errors.organizationName}</p>}
-                        </div>
-
-                        <div>
-                          <label className="block text-[13px] font-medium text-[#475569] mb-2">VDC идентификатор</label>
-                          <input
-                            type="text"
-                            value={formData.organizationVdc}
-                            onChange={e => setFormData({ ...formData, organizationVdc: e.target.value })}
-                            placeholder="company-vdc"
-                            className={`w-full h-11 px-4 rounded-lg border text-[14px] text-[#0F172A] placeholder:text-[#CBD5E1] outline-none transition-all ${
-                              errors.organizationVdc ? 'border-[#E30613] bg-[#FFF5F5]' : 'border-[#E2E8F0] bg-white focus:border-[#E30613] focus:ring-2 focus:ring-[#E30613]/10'
-                            }`}
-                          />
-                          {errors.organizationVdc && <p className="mt-1.5 text-[11px] text-[#E30613]">{errors.organizationVdc}</p>}
-                        </div>
-                      </>
-                    )}
+                    <div>
+                      <label className="block text-[13px] font-medium text-[#475569] mb-2">VDC идентификатор</label>
+                      <input
+                        type="text"
+                        value={formData.organizationVdc}
+                        onChange={e => setFormData({ ...formData, organizationVdc: e.target.value })}
+                        placeholder="company-vdc"
+                        className={`w-full h-11 px-4 rounded-lg border text-[14px] text-[#0F172A] placeholder:text-[#CBD5E1] outline-none transition-all ${
+                          errors.organizationVdc ? 'border-[#E30613] bg-[#FFF5F5]' : 'border-[#E2E8F0] bg-white focus:border-[#E30613] focus:ring-2 focus:ring-[#E30613]/10'
+                        }`}
+                      />
+                      {errors.organizationVdc && <p className="mt-1.5 text-[11px] text-[#E30613]">{errors.organizationVdc}</p>}
+                    </div>
                   </>
                 )}
 
@@ -391,7 +459,7 @@ export default function RegisterPage() {
                     className="flex-1 h-11 bg-[#E30613] hover:bg-[#C00510] active:bg-[#B00510] text-white rounded-lg text-[14px] font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {loading && <Loader2 size={16} className="animate-spin" />}
-                    Создать аккаунт
+                    {inviteMode ? 'Принять приглашение' : 'Создать аккаунт'}
                   </button>
                 </div>
                 {submitError && (

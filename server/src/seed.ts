@@ -11,6 +11,7 @@ async function main() {
   await prisma.vM.deleteMany();
   await prisma.quota.deleteMany();
   await prisma.vDC.deleteMany();
+  await prisma.invite.deleteMany();
   await prisma.user.deleteMany();
   await prisma.tenant.deleteMany();
   await prisma.template.deleteMany();

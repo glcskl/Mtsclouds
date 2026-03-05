@@ -89,6 +89,11 @@ usersRouter.post('/', async (req: Request, res: Response) => {
     return;
   }
 
+  if (currentUser.role !== 'platform_admin') {
+    res.status(403).json({ error: 'Use invites to add users' });
+    return;
+  }
+
   const { name, email, password, role, tenantId } = req.body ?? {};
   if (!name || !email || !password || !role) {
     res.status(400).json({ error: 'name, email, password and role are required' });
@@ -110,11 +115,7 @@ usersRouter.post('/', async (req: Request, res: Response) => {
   }
 
   let targetTenantId: string | null = null;
-  if (currentUser.role === 'platform_admin') {
-    targetTenantId = tenantId ? String(tenantId) : currentUser.tenantId;
-  } else {
-    targetTenantId = currentUser.tenantId;
-  }
+  targetTenantId = tenantId ? String(tenantId) : null;
 
   if (!targetTenantId) {
     res.status(400).json({ error: 'Tenant is required for user creation' });
