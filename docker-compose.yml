@@ -13,8 +13,10 @@ services:
       - PORT=3001
       - PROVIDER=${PROVIDER:-mock}
     volumes:
-      # Mount docker socket for DockerProvider mode (optional)
+      # Mount docker socket for DockerProvider mode
       - /var/run/docker.sock:/var/run/docker.sock
+    # Run as root so the process can access docker.sock
+    user: "0:0"
     restart: unless-stopped
 
   frontend:

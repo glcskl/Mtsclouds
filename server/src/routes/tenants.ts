@@ -59,6 +59,7 @@ function formatVM(vm: any) {
     updatedAt: vm.updatedAt.toISOString(),
     provider: vm.provider === 'docker' ? 'Docker' : 'Mock',
     port: vm.port || undefined,
+    containerId: vm.providerRef || undefined,
   };
 }
 

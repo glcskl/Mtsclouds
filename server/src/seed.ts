@@ -19,7 +19,7 @@ async function main() {
 
   // ─── Templates ─────────────────────────────────────────────
   const tplUbuntu = await prisma.template.create({
-    data: { id: 'tpl-1', name: 'Ubuntu 22.04 SSH', image: 'ubuntu-sshd:22.04', description: 'Базовая Ubuntu с SSH-доступом. Подходит для разработки и тестирования.', defaultCpu: 2, defaultRamGb: 4, defaultDiskGb: 20, category: 'OS' },
+    data: { id: 'tpl-1', name: 'Ubuntu 22.04', image: 'ubuntu:22.04', description: 'Базовая Ubuntu. Подходит для разработки и тестирования.', defaultCpu: 2, defaultRamGb: 4, defaultDiskGb: 20, category: 'OS' },
   });
   const tplNginx = await prisma.template.create({
     data: { id: 'tpl-2', name: 'Nginx Web Server', image: 'nginx:latest', description: 'Высокопроизводительный веб-сервер и обратный прокси.', defaultCpu: 1, defaultRamGb: 1, defaultDiskGb: 10, category: 'Web' },

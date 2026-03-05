@@ -26,6 +26,7 @@ function formatVM(vm: any) {
     updatedAt: vm.updatedAt.toISOString(),
     provider: vm.provider === 'docker' ? 'Docker' : 'Mock',
     port: vm.port || undefined,
+    containerId: vm.providerRef || undefined,
   };
 }
 
@@ -148,9 +149,10 @@ vmsRouter.post('/', async (req: Request, res: Response) => {
 
     res.status(201).json(formatVM(updated));
   } catch (err: any) {
+    console.error('[vm:create] Provider error:', err.message || err);
     await prisma.vM.update({ where: { id: vm.id }, data: { status: 'ERROR' } });
     const errorVM = await prisma.vM.findUnique({ where: { id: vm.id }, include: { template: true } });
-    res.status(201).json(formatVM(errorVM));
+    res.status(201).json({ ...formatVM(errorVM), _providerError: err.message });
   }
 });
 

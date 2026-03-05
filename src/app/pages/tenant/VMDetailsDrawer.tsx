@@ -35,8 +35,12 @@ export function VMDetailsDrawer() {
     setSelectedVM(null);
   };
 
+  const connectCmd = selectedVM.containerId
+    ? `docker exec -it ${selectedVM.containerId} /bin/sh`
+    : `ssh user@vm-host -p ${selectedVM.port || 2222}`;
+
   const copySSH = () => {
-    navigator.clipboard.writeText(`ssh user@vm-host -p ${selectedVM.port || 2222}`);
+    navigator.clipboard.writeText(connectCmd);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -81,7 +85,7 @@ export function VMDetailsDrawer() {
     setShowDeleteModal(true);
   };
 
-  const isSSHTemplate = selectedVM.template.includes('sshd') || selectedVM.template.includes('ubuntu');
+  const canConnect = selectedVM.status === 'RUNNING' && (selectedVM.containerId || selectedVM.template.includes('ubuntu'));
 
   return (
     <>
@@ -216,17 +220,17 @@ export function VMDetailsDrawer() {
                 </div>
               </div>
 
-              {/* SSH block */}
-              {isSSHTemplate && selectedVM.status === 'RUNNING' && (
+              {/* Connect block */}
+              {canConnect && (
                 <div>
-                  <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">SSH-доступ</p>
+                  <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">Подключение</p>
                   <div className="bg-[#0F172A] rounded-lg p-4 relative">
                     <div className="flex items-center gap-2 mb-2">
                       <Terminal size={13} className="text-[#94A3B8]" />
                       <span className="text-[11px] text-[#64748B]">Команда подключения</span>
                     </div>
-                    <p className="font-mono text-[13px] text-[#93C5FD]">
-                      ssh user@vm-host -p {selectedVM.port || 2222}
+                    <p className="font-mono text-[13px] text-[#93C5FD] pr-24 break-all">
+                      {connectCmd}
                     </p>
                     <button
                       onClick={copySSH}

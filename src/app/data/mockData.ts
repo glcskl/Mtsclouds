@@ -16,6 +16,7 @@ export interface VM {
   updatedAt: string;
   provider: string;
   port?: number;
+  containerId?: string;
 }
 
 export interface Quota {
@@ -75,7 +76,7 @@ export const mockTenants: Tenant[] = [
       {
         id: 'vm-002',
         name: 'worker-02',
-        template: 'ubuntu-sshd:22.04',
+        template: 'ubuntu:22.04',
         status: 'RUNNING',
         cpu: 2,
         ram: 8,
@@ -273,7 +274,7 @@ export const templates = [
   {
     id: 'tpl-1',
     name: 'Ubuntu 22.04 SSH',
-    image: 'ubuntu-sshd:22.04',
+    image: 'ubuntu:22.04',
     description: 'Базовая Ubuntu с SSH-доступом. Подходит для разработки и тестирования.',
     defaultCpu: 2,
     defaultRam: 4,

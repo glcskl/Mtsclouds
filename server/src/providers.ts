@@ -57,7 +57,8 @@ export class DockerProvider implements ComputeProvider {
   }
 
   async createVm(spec: VMSpec) {
-    // Pull image (ignore if already exists)
+    // Pull image
+    console.log(`[docker] Pulling image: ${spec.image}`);
     try {
       await new Promise<void>((resolve, reject) => {
         this.docker.pull(spec.image, {}, (err: any, stream: any) => {
@@ -68,13 +69,25 @@ export class DockerProvider implements ComputeProvider {
           });
         });
       });
-    } catch {
-      // Image might already exist locally
+    } catch (pullErr: any) {
+      console.warn(`[docker] Pull failed for ${spec.image}: ${pullErr.message}. Checking if image exists locally...`);
+      // Check if image exists locally
+      try {
+        await this.docker.getImage(spec.image).inspect();
+        console.log(`[docker] Image ${spec.image} found locally`);
+      } catch {
+        throw new Error(`Image "${spec.image}" not found locally and pull failed: ${pullErr.message}`);
+      }
     }
+
+    const containerName = `mts-${spec.name}-${spec.vmId.slice(-6)}`.replace(/[^a-zA-Z0-9_.-]/g, '-');
+    console.log(`[docker] Creating container: ${containerName} from ${spec.image}`);
 
     const container = await this.docker.createContainer({
       Image: spec.image,
-      name: `mts-${spec.tenantId}-${spec.name}`.replace(/[^a-zA-Z0-9_.-]/g, '-'),
+      name: containerName,
+      Tty: true,
+      OpenStdin: true,
       Labels: {
         'mts.tenantId': spec.tenantId,
         'mts.vdcId': spec.vdcId,
@@ -83,7 +96,7 @@ export class DockerProvider implements ComputeProvider {
         'mts.managed': 'true',
       },
       HostConfig: {
-        CpuCount: spec.cpu,
+        NanoCpus: spec.cpu * 1e9,  // CPU limit in nanoseconds
         Memory: spec.ramGb * 1024 * 1024 * 1024,
         PublishAllPorts: true,
       },
@@ -95,6 +108,8 @@ export class DockerProvider implements ComputeProvider {
     const ports = info.NetworkSettings?.Ports || {};
     const firstPort = Object.values(ports).flat().find((p: any) => p?.HostPort);
     const ip = info.NetworkSettings?.IPAddress || '172.17.0.2';
+
+    console.log(`[docker] Container started: ${container.id.slice(0, 12)} ip=${ip}`);
 
     return {
       providerRef: container.id,
