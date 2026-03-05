@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { Check, Zap, TrendingUp, Award, Sparkles } from 'lucide-react';
 import { tariffPlans } from '../data/mockData';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import { useApp } from '../context/AppContext';
 
 export default function TariffPlansPage() {
+  const navigate = useNavigate();
+  const { currentUser } = useApp();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
   const getPrice = (basePrice: number) => {
@@ -14,6 +17,14 @@ export default function TariffPlansPage() {
       currency: 'RUB',
       minimumFractionDigits: 0,
     }).format(price);
+  };
+
+  const handlePlanSelect = (planId: string) => {
+    if (currentUser) {
+      navigate('/calculator');
+      return;
+    }
+    navigate(`/register?plan=${encodeURIComponent(planId)}`);
   };
 
   return (
@@ -142,6 +153,7 @@ export default function TariffPlansPage() {
 
                 {/* CTA */}
                 <button
+                  onClick={() => handlePlanSelect(plan.id)}
                   className={`w-full h-11 rounded-lg text-[14px] font-medium transition-all ${
                     plan.popular
                       ? 'bg-[#E30613] hover:bg-[#C00510] text-white shadow-lg shadow-[#E30613]/20'

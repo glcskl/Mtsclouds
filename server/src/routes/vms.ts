@@ -41,6 +41,11 @@ async function getUserAndTenant(req: Request, res: Response) {
   return user;
 }
 
+function getRouteParam(value: string | string[] | undefined): string | null {
+  const param = Array.isArray(value) ? value[0] : value;
+  return param || null;
+}
+
 // POST /api/vms  - create VM
 vmsRouter.post('/', async (req: Request, res: Response) => {
   const user = await getUserAndTenant(req, res);
@@ -161,7 +166,10 @@ vmsRouter.post('/:id/start', async (req: Request, res: Response) => {
   const user = await getUserAndTenant(req, res);
   if (!user) return;
 
-  const vm = await prisma.vM.findUnique({ where: { id: req.params.id }, include: { template: true } });
+  const vmId = getRouteParam(req.params.id);
+  if (!vmId) { res.status(400).json({ error: 'Invalid VM id' }); return; }
+
+  const vm = await prisma.vM.findUnique({ where: { id: vmId }, include: { template: true } });
   if (!vm) { res.status(404).json({ error: 'VM not found' }); return; }
   if (user.role !== 'platform_admin' && vm.tenantId !== user.tenantId) {
     res.status(403).json({ error: 'Forbidden' }); return;
@@ -196,7 +204,10 @@ vmsRouter.post('/:id/stop', async (req: Request, res: Response) => {
   const user = await getUserAndTenant(req, res);
   if (!user) return;
 
-  const vm = await prisma.vM.findUnique({ where: { id: req.params.id }, include: { template: true } });
+  const vmId = getRouteParam(req.params.id);
+  if (!vmId) { res.status(400).json({ error: 'Invalid VM id' }); return; }
+
+  const vm = await prisma.vM.findUnique({ where: { id: vmId }, include: { template: true } });
   if (!vm) { res.status(404).json({ error: 'VM not found' }); return; }
   if (user.role !== 'platform_admin' && vm.tenantId !== user.tenantId) {
     res.status(403).json({ error: 'Forbidden' }); return;
@@ -231,7 +242,10 @@ vmsRouter.patch('/:id', async (req: Request, res: Response) => {
   const user = await getUserAndTenant(req, res);
   if (!user) return;
 
-  const vm = await prisma.vM.findUnique({ where: { id: req.params.id }, include: { template: true } });
+  const vmId = getRouteParam(req.params.id);
+  if (!vmId) { res.status(400).json({ error: 'Invalid VM id' }); return; }
+
+  const vm = await prisma.vM.findUnique({ where: { id: vmId }, include: { template: true } });
   if (!vm) { res.status(404).json({ error: 'VM not found' }); return; }
   if (user.role !== 'platform_admin' && vm.tenantId !== user.tenantId) {
     res.status(403).json({ error: 'Forbidden' }); return;
@@ -292,7 +306,10 @@ vmsRouter.delete('/:id', async (req: Request, res: Response) => {
   const user = await getUserAndTenant(req, res);
   if (!user) return;
 
-  const vm = await prisma.vM.findUnique({ where: { id: req.params.id } });
+  const vmId = getRouteParam(req.params.id);
+  if (!vmId) { res.status(400).json({ error: 'Invalid VM id' }); return; }
+
+  const vm = await prisma.vM.findUnique({ where: { id: vmId } });
   if (!vm) { res.status(404).json({ error: 'VM not found' }); return; }
   if (user.role !== 'platform_admin' && vm.tenantId !== user.tenantId) {
     res.status(403).json({ error: 'Forbidden' }); return;
@@ -320,16 +337,53 @@ vmsRouter.delete('/:id', async (req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+// GET /api/vms/:id/metrics/live
+vmsRouter.get('/:id/metrics/live', async (req: Request, res: Response) => {
+  const user = await getUserAndTenant(req, res);
+  if (!user) return;
+
+  const vmId = getRouteParam(req.params.id);
+  if (!vmId) { res.status(400).json({ error: 'Invalid VM id' }); return; }
+
+  const vm = await prisma.vM.findUnique({ where: { id: vmId } });
+  if (!vm) { res.status(404).json({ error: 'VM not found' }); return; }
+  if (user.role !== 'platform_admin' && vm.tenantId !== user.tenantId) {
+    res.status(403).json({ error: 'Forbidden' }); return;
+  }
+
+  if (vm.providerRef && vm.status === 'RUNNING') {
+    try {
+      const stats = await getProvider().stats(vm.providerRef);
+      res.json(stats);
+      return;
+    } catch {
+      // fallback below
+    }
+  }
+
+  res.json({
+    cpuPercent: 0,
+    ramUsedMb: 0,
+    ramLimitMb: vm.ramGb * 1024,
+  });
+});
+
 // GET /api/vms/:id
 vmsRouter.get('/:id', async (req: Request, res: Response) => {
-  const vm = await prisma.vM.findUnique({ where: { id: req.params.id }, include: { template: true } });
+  const vmId = getRouteParam(req.params.id);
+  if (!vmId) { res.status(400).json({ error: 'Invalid VM id' }); return; }
+
+  const vm = await prisma.vM.findUnique({ where: { id: vmId }, include: { template: true } });
   if (!vm) { res.status(404).json({ error: 'VM not found' }); return; }
   res.json(formatVM(vm));
 });
 
 // GET /api/vms/:id/metrics
 vmsRouter.get('/:id/metrics', async (req: Request, res: Response) => {
-  const vm = await prisma.vM.findUnique({ where: { id: req.params.id } });
+  const vmId = getRouteParam(req.params.id);
+  if (!vmId) { res.status(400).json({ error: 'Invalid VM id' }); return; }
+
+  const vm = await prisma.vM.findUnique({ where: { id: vmId } });
   if (!vm) { res.status(404).json({ error: 'VM not found' }); return; }
 
   // Try to get real stats from provider

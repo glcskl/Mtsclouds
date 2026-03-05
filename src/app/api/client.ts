@@ -21,11 +21,30 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
+  register: (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    password: string;
+    role: 'platform_admin' | 'tenant_admin' | 'user';
+    tenantId?: string;
+    organizationName?: string;
+    organizationVdc?: string;
+  }) =>
+    request<{ user: any }>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   logout: () =>
     request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
 
   me: () =>
     request<{ user: any }>('/api/auth/me'),
+
+  getPublicTenants: () =>
+    request<Array<{ id: string; name: string }>>('/api/auth/tenants-list'),
 
   // ─── Tenants ─────────────────────────────────────────────
   getTenants: () =>
@@ -59,9 +78,36 @@ export const api = {
   getVMMetrics: (id: string) =>
     request<any[]>(`/api/vms/${id}/metrics`),
 
+  getVMLiveMetrics: (id: string) =>
+    request<{ cpuPercent: number; ramUsedMb: number; ramLimitMb: number }>(`/api/vms/${id}/metrics/live`),
+
   // ─── Templates ───────────────────────────────────────────
   getTemplates: () =>
     request<any[]>('/api/templates'),
+
+  // ─── Users ───────────────────────────────────────────────
+  getUsers: () =>
+    request<any[]>('/api/users'),
+
+  createUser: (data: { name: string; email: string; password: string; role: 'tenant_admin' | 'user'; tenantId?: string }) =>
+    request<any>('/api/users', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateUser: (id: string, data: { name?: string; role?: 'tenant_admin' | 'user' }) =>
+    request<any>(`/api/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteUser: (id: string) =>
+    request<{ ok: boolean }>(`/api/users/${id}`, { method: 'DELETE' }),
+
+  // ─── Billing ─────────────────────────────────────────────
+  getBillingSummary: (tenantId?: string) =>
+    request<{ total: number; breakdown: any[] }>(`/api/billing/summary${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ''}`),
+
+  getPricing: () =>
+    request<{ cpu: number; ram: number; disk: number; bandwidth: number }>('/api/billing/pricing'),
+
+  // ─── Infrastructure ──────────────────────────────────────
+  getDockerInfo: () =>
+    request<any>('/api/infrastructure/docker'),
 
   // ─── Audit ───────────────────────────────────────────────
   getAuditLog: () =>

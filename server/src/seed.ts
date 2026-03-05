@@ -14,6 +14,7 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.tenant.deleteMany();
   await prisma.template.deleteMany();
+  await prisma.pricingConfig.deleteMany();
 
   const hash = bcrypt.hashSync('admin123', 10);
 
@@ -35,6 +36,16 @@ async function main() {
   });
   const tplNode = await prisma.template.create({
     data: { id: 'tpl-6', name: 'Node.js 20 LTS', image: 'node:20-alpine', description: 'Среда выполнения JavaScript для серверных приложений.', defaultCpu: 2, defaultRamGb: 2, defaultDiskGb: 15, category: 'Runtime' },
+  });
+
+  // ─── Pricing ───────────────────────────────────────────────
+  await prisma.pricingConfig.createMany({
+    data: [
+      { resource: 'cpu', pricePerHour: 5 },
+      { resource: 'ram', pricePerHour: 3 },
+      { resource: 'disk', pricePerHour: 0.5 },
+      { resource: 'bandwidth', pricePerHour: 2 },
+    ],
   });
 
   // ─── Tenants ───────────────────────────────────────────────

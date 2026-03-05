@@ -83,6 +83,12 @@ model Template {
   vms           VM[]
 }
 
+model PricingConfig {
+  id           String @id @default(cuid())
+  resource     String @unique
+  pricePerHour Float
+}
+
 model AuditLog {
   id          String   @id @default(cuid())
   actorUserId String

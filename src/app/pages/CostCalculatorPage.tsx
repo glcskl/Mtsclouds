@@ -1,14 +1,24 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { Calculator, DollarSign, TrendingUp, Calendar, Zap, Server } from 'lucide-react';
-import { pricing } from '../data/mockData';
+import { api } from '../api/client';
+
+const DEFAULT_PRICING = {
+  cpu: 5,
+  ram: 3,
+  disk: 0.5,
+  bandwidth: 2,
+};
 
 export default function CostCalculatorPage() {
+  const navigate = useNavigate();
   const [cpu, setCpu] = useState(4);
   const [ram, setRam] = useState(8);
   const [disk, setDisk] = useState(100);
   const [bandwidth, setBandwidth] = useState(100);
   const [hours, setHours] = useState(730); // ~1 month
   const [vmCount, setVmCount] = useState(1);
+  const [pricing, setPricing] = useState(DEFAULT_PRICING);
 
   const [costs, setCosts] = useState({
     hourly: 0,
@@ -16,6 +26,10 @@ export default function CostCalculatorPage() {
     monthly: 0,
     yearly: 0,
   });
+
+  useEffect(() => {
+    api.getPricing().then(setPricing).catch(() => setPricing(DEFAULT_PRICING));
+  }, []);
 
   useEffect(() => {
     const hourlyCost = (
@@ -31,7 +45,7 @@ export default function CostCalculatorPage() {
       monthly: hourlyCost * 730,
       yearly: hourlyCost * 8760,
     });
-  }, [cpu, ram, disk, bandwidth, vmCount]);
+  }, [cpu, ram, disk, bandwidth, vmCount, pricing]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -281,7 +295,10 @@ export default function CostCalculatorPage() {
                 </div>
               </div>
 
-              <button className="w-full h-12 bg-white text-[#E30613] rounded-xl text-[14px] font-bold hover:bg-[#F8FAFC] transition-colors mt-6 shadow-xl">
+              <button
+                onClick={() => navigate('/register')}
+                className="w-full h-12 bg-white text-[#E30613] rounded-xl text-[14px] font-bold hover:bg-[#F8FAFC] transition-colors mt-6 shadow-xl"
+              >
                 Начать использование
               </button>
             </div>

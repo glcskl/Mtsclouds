@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { Eye, EyeOff, Loader2, CheckCircle2, Building2 } from 'lucide-react';
-import { mockTenants } from '../data/mockData';
+import { api } from '../api/client';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -26,6 +26,12 @@ export default function RegisterPage() {
   const [showPw, setShowPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState('');
+  const [tenants, setTenants] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    api.getPublicTenants().then(setTenants).catch(() => setTenants([]));
+  }, []);
 
   const validateStep = () => {
     const newErrors: Record<string, string> = {};
@@ -46,7 +52,7 @@ export default function RegisterPage() {
     }
 
     if (step === 'organization') {
-      if (formData.role === 'tenant_admin' && !formData.tenant && !formData.organizationName.trim()) {
+      if (formData.role !== 'platform_admin' && !formData.tenant && !formData.organizationName.trim()) {
         newErrors.organizationName = 'Выберите или создайте организацию';
       }
       if (formData.organizationName && !formData.organizationVdc.trim()) {
@@ -59,12 +65,14 @@ export default function RegisterPage() {
   };
 
   const handleNext = () => {
+    setSubmitError('');
     if (!validateStep()) return;
     if (step === 'info') setStep('credentials');
     else if (step === 'credentials') setStep('organization');
   };
 
   const handleBack = () => {
+    setSubmitError('');
     if (step === 'credentials') setStep('info');
     else if (step === 'organization') setStep('credentials');
   };
@@ -74,13 +82,33 @@ export default function RegisterPage() {
     if (!validateStep()) return;
 
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setLoading(false);
-    setSuccess(true);
+    setSubmitError('');
+    try {
+      await api.register({
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        password: formData.password,
+        role: formData.role,
+        tenantId: formData.role !== 'platform_admin' && formData.tenant ? formData.tenant : undefined,
+        organizationName: formData.role !== 'platform_admin' && !formData.tenant
+          ? formData.organizationName.trim() || undefined
+          : undefined,
+        organizationVdc: formData.role !== 'platform_admin' && !formData.tenant
+          ? formData.organizationVdc.trim() || undefined
+          : undefined,
+      });
 
-    setTimeout(() => {
-      navigate('/login');
-    }, 2000);
+      setSuccess(true);
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+    } catch (err: any) {
+      setSubmitError(err.body?.error || err.message || 'Ошибка регистрации');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -305,7 +333,7 @@ export default function RegisterPage() {
                         className="w-full h-11 px-4 rounded-lg border border-[#E2E8F0] bg-white text-[14px] text-[#0F172A] outline-none focus:border-[#E30613] focus:ring-2 focus:ring-[#E30613]/10 transition-all"
                       >
                         <option value="">Создать новую организацию...</option>
-                        {mockTenants.map(t => (
+                        {tenants.map(t => (
                           <option key={t.id} value={t.id}>{t.name}</option>
                         ))}
                       </select>
@@ -366,6 +394,9 @@ export default function RegisterPage() {
                     Создать аккаунт
                   </button>
                 </div>
+                {submitError && (
+                  <p className="text-[12px] text-[#E30613]">{submitError}</p>
+                )}
               </div>
             )}
           </form>

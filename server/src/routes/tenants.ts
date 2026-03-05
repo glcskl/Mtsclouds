@@ -4,6 +4,11 @@ import { createAuditLog } from './audit.js';
 
 export const tenantsRouter = Router();
 
+function getRouteParam(value: string | string[] | undefined): string | null {
+  const param = Array.isArray(value) ? value[0] : value;
+  return param || null;
+}
+
 // Helper: build frontend-compatible tenant shape
 async function buildTenantResponse(tenantId: string) {
   const tenant = await prisma.tenant.findUnique({
@@ -135,7 +140,10 @@ tenantsRouter.post('/', async (req: Request, res: Response) => {
 
 // GET /api/tenants/:id
 tenantsRouter.get('/:id', async (req: Request, res: Response) => {
-  const tenant = await buildTenantResponse(req.params.id);
+  const tenantId = getRouteParam(req.params.id);
+  if (!tenantId) { res.status(400).json({ error: 'Invalid tenant id' }); return; }
+
+  const tenant = await buildTenantResponse(tenantId);
   if (!tenant) { res.status(404).json({ error: 'Not found' }); return; }
   res.json(tenant);
 });
@@ -150,7 +158,8 @@ tenantsRouter.patch('/:id', async (req: Request, res: Response) => {
   }
 
   const { name, vdc, cpuLimit, ramLimit, diskLimit, vmLimit, status } = req.body;
-  const tenantId = req.params.id;
+  const tenantId = getRouteParam(req.params.id);
+  if (!tenantId) { res.status(400).json({ error: 'Invalid tenant id' }); return; }
 
   const existing = await prisma.tenant.findUnique({
     where: { id: tenantId },

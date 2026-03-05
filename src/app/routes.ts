@@ -15,6 +15,8 @@ import TenantDashboardPage from './pages/tenant/TenantDashboardPage';
 import VMsListPage from './pages/tenant/VMsListPage';
 import CreateVMPage from './pages/tenant/CreateVMPage';
 import TemplatesPage from './pages/tenant/TemplatesPage';
+import UsersPage from './pages/tenant/UsersPage';
+import BillingPage from './pages/tenant/BillingPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
 
 export const router = createBrowserRouter([
@@ -41,7 +43,6 @@ export const router = createBrowserRouter([
   { path: '/tenant/vms/new', Component: CreateVMPage },
   { path: '/tenant/templates', Component: TemplatesPage },
 
-  // Placeholder routes
-  { path: '/tenant/users', Component: AccessDeniedPage },
-  { path: '/tenant/billing', Component: AccessDeniedPage },
+  { path: '/tenant/users', Component: UsersPage },
+  { path: '/tenant/billing', Component: BillingPage },
 ]);

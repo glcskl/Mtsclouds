@@ -6,6 +6,9 @@ import { tenantsRouter } from './routes/tenants.js';
 import { vmsRouter } from './routes/vms.js';
 import { templatesRouter } from './routes/templates.js';
 import { auditRouter } from './routes/audit.js';
+import { usersRouter } from './routes/users.js';
+import { billingRouter } from './routes/billing.js';
+import { infrastructureRouter } from './routes/infrastructure.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
@@ -34,6 +37,9 @@ app.use('/api/tenants', tenantsRouter);
 app.use('/api/vms', vmsRouter);
 app.use('/api/templates', templatesRouter);
 app.use('/api/audit', auditRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/billing', billingRouter);
+app.use('/api/infrastructure', infrastructureRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

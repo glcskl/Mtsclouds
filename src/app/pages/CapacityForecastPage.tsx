@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { Brain, TrendingUp, Cpu, HardDrive, Database, Loader2, Sparkles } from 'lucide-react';
 import { workloadTypes, userLoadLevels } from '../data/mockData';
+import { useApp } from '../context/AppContext';
 
 export default function CapacityForecastPage() {
+  const navigate = useNavigate();
+  const { currentUser } = useApp();
   const [workloadType, setWorkloadType] = useState('web-app');
   const [userLoad, setUserLoad] = useState('medium');
   const [vmCount, setVmCount] = useState(3);
   const [analyzing, setAnalyzing] = useState(false);
   const [forecast, setForecast] = useState<any>(null);
 
-  const runForecast = async () => {
+  const runForecast = () => {
     setAnalyzing(true);
     setForecast(null);
-
-    // Simulate AI analysis
-    await new Promise(r => setTimeout(r, 2500));
 
     const workload = workloadTypes.find(w => w.id === workloadType)!;
     const load = userLoadLevels.find(l => l.id === userLoad)!;
@@ -327,7 +328,10 @@ export default function CapacityForecastPage() {
                       <p className="text-[11px] opacity-70">GB SSD</p>
                     </div>
                   </div>
-                  <button className="w-full h-12 bg-white text-[#E30613] rounded-lg text-[14px] font-bold hover:bg-[#F8FAFC] transition-colors">
+                  <button
+                    onClick={() => navigate(currentUser && currentUser.role !== 'platform_admin' ? '/tenant/vms/new' : '/calculator')}
+                    className="w-full h-12 bg-white text-[#E30613] rounded-lg text-[14px] font-bold hover:bg-[#F8FAFC] transition-colors"
+                  >
                     Применить конфигурацию
                   </button>
                 </div>
